@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\AbsensiController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
@@ -14,11 +13,7 @@ Route::get('/kontak', fn() => view('kontak'));
 
 // 📌 Halaman beranda & menu di sidebar (umum)
 Route::get('/beranda', fn() => view('beranda.index'))->name('beranda.index');
-
-// ❗ DIGANTI: absensi harus pakai controller, bukan view langsung
-Route::get('/absensi', [AbsensiController::class, 'index'])->middleware('auth')->name('absensi.index');
-Route::post('/absensi', [AbsensiController::class, 'store'])->middleware('auth')->name('absensi.store');
-
+Route::get('/absensi', fn() => view('absensi.index'))->name('absensi.index');
 Route::get('/pengeluaran', fn() => view('pengeluaran.index'))->name('pengeluaran.index');
 Route::get('/pemasukan', fn() => view('pemasukan.index'))->name('pemasukan.index');
 
@@ -46,9 +41,14 @@ Route::get('/dashboard', function () {
 // ✅ Route tambahan untuk sidebar (biar gak error)
 // =====================================================
 Route::middleware(['auth'])->group(function () {
-    // --- ABSENSI ROLE KHUSUS ---
-    Route::get('/absensi/karyawan', [AbsensiController::class, 'index'])->name('absensi.karyawan');
-    Route::get('/absensi/mandor', [AbsensiController::class, 'index'])->name('absensi.mandor');
+    // --- DASHBOARD ---
+    // Route::get('/dashboard/pimpinan', fn() => view('dashboard.pimpinan'))->name('dashboard.pimpinan');
+    // Route::get('/dashboard/mandor', fn() => view('dashboard.mandor'))->name('dashboard.mandor');
+    // Route::get('/dashboard/karyawan', fn() => view('dashboard.karyawan'))->name('dashboard.karyawan');
+
+    // --- ABSENSI ---
+    Route::get('/absensi/karyawan', fn() => view('absensi.index'))->name('absensi.karyawan');
+    Route::get('/absensi/mandor', fn() => view('absensi.index'))->name('absensi.mandor');
 
     // --- PROFIL ---
     Route::get('/profil/karyawan', fn() => view('profile.edit'))->name('profil.karyawan');

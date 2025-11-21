@@ -30,19 +30,18 @@
     <!-- Header Hari & Info -->
     <div id="infoTanggal" class="text-center text-gray-700 text-lg font-medium mt-4"></div>
 
-    <!-- FORM ABSENSI -->
-    <form id="formAbsensi" method="POST" action="{{ route('absensi.store') }}" class="p-6">
+    <!-- Tabel Absensi -->
+    <form method="POST" action="{{ route('absensi.store') }}" class="p-6">
         @csrf
 
-        <!-- tanggal real -->
         <input type="hidden" name="tanggal" id="tanggal_input">
 
         <div class="overflow-x-auto rounded-lg border border-gray-200">
             <table class="min-w-full text-sm text-gray-700">
                 <thead class="bg-gray-100 text-gray-700 uppercase text-xs">
                     <tr>
-                        <th class="px-4 py-3 border">No</th>
-                        <th class="px-4 py-3 border">Nama & Role</th>
+                        <th class="px-4 py-3 text-left border">No</th>
+                        <th class="px-4 py-3 text-left border">Nama & Role</th>
                         <th class="px-4 py-3 text-center border">Hadir</th>
                         <th class="px-4 py-3 text-center border">Izin</th>
                         <th class="px-4 py-3 text-center border">Sakit</th>
@@ -51,60 +50,57 @@
                         <th class="px-4 py-3 text-center border">Alpha</th>
                         @endif
 
-                        <th class="px-4 py-3 border">Keterangan</th>
+                        <th class="px-4 py-3 text-left border">Keterangan</th>
                     </tr>
                 </thead>
 
                 <tbody class="divide-y divide-gray-200 bg-white">
-                    @foreach($karyawan as $i => $k)
+
+                    @foreach($karyawan as $index => $k)
                         @php
                             $user = auth()->user();
                             $disabled = ($user->role === 'karyawan' && $user->id != $k->id) ? 'disabled' : '';
                         @endphp
 
-                        <tr>
-                            <td class="px-4 py-3 border text-center">{{ $i + 1 }}</td>
+                        <tr class="hover:bg-gray-50 transition">
+
+                            <td class="px-4 py-3 border text-center">{{ $index + 1 }}</td>
 
                             <td class="px-4 py-3 border">
                                 <div class="font-semibold">{{ $k->nama }}</div>
                                 <div class="text-xs text-gray-500">{{ ucfirst($k->role) }}</div>
                             </td>
 
-                            <!-- HADIR -->
                             <td class="px-4 py-3 border text-center">
-                                <input {{ $disabled }} type="radio" name="absensi[{{ $k->id }}]" value="Hadir"
-                                       class="statusRadio accent-green-500 w-5 h-5">
+                                <input {{ $disabled }} type="radio" name="absensi[{{ $k->id }}]" value="Hadir" class="accent-green-500 w-5 h-5 statusRadio">
                             </td>
 
-                            <!-- IZIN -->
                             <td class="px-4 py-3 border text-center">
-                                <input {{ $disabled }} type="radio" name="absensi[{{ $k->id }}]" value="Izin"
-                                       class="statusRadio accent-yellow-500 w-5 h-5">
+                                <input {{ $disabled }} type="radio" name="absensi[{{ $k->id }}]" value="Izin" class="accent-yellow-500 w-5 h-5 statusRadio">
                             </td>
 
-                            <!-- SAKIT -->
                             <td class="px-4 py-3 border text-center">
-                                <input {{ $disabled }} type="radio" name="absensi[{{ $k->id }}]" value="Sakit"
-                                       class="statusRadio accent-blue-500 w-5 h-5">
+                                <input {{ $disabled }} type="radio" name="absensi[{{ $k->id }}]" value="Sakit" class="accent-blue-500 w-5 h-5 statusRadio">
                             </td>
 
                             @if($user->role !== 'karyawan')
-                            <!-- ALPHA -->
                             <td class="px-4 py-3 border text-center">
-                                <input {{ $disabled }} type="radio" name="absensi[{{ $k->id }}]" value="Alpha"
-                                       class="statusRadio accent-red-500 w-5 h-5">
+                                <input {{ $disabled }} type="radio" name="absensi[{{ $k->id }}]" value="Alpha" class="accent-red-500 w-5 h-5 statusRadio">
                             </td>
                             @endif
 
-                            <!-- KETERANGAN -->
                             <td class="px-4 py-3 border">
                                 <input {{ $disabled }} type="text" name="keterangan[{{ $k->id }}]"
                                        class="ketInput hidden w-full px-2 py-1 border rounded"
                                        placeholder="Isi keterangan...">
                             </td>
+
                         </tr>
+
                     @endforeach
+
                 </tbody>
+
             </table>
         </div>
 
@@ -117,12 +113,9 @@
     </form>
 </div>
 
-<!-- TOAST -->
-<div id="toast"
-     class="fixed top-5 right-5 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg opacity-0 transition duration-300">
-</div>
 
-<!-- SCRIPT KALENDER (tidak diubah) -->
+
+<!-- SCRIPT KALENDER -->
 <script>
 const tahunSelect = document.getElementById('tahun');
 const bulanSelect = document.getElementById('bulan');
@@ -174,9 +167,10 @@ function tampilkanInfoTanggal() {
 
     const date = new Date(y, m, d);
     const hari = hariNama[date.getDay()];
-    const tanggalStr = `${hari}, ${d} ${bulanNama[m]} ${y}`;
 
+    const tanggalStr = `${hari}, ${d} ${bulanNama[m]} ${y}`;
     infoTanggal.textContent = tanggalStr;
+
     document.getElementById('tanggal_input').value = `${y}-${parseInt(m)+1}-${d}`;
 }
 
@@ -184,40 +178,13 @@ tahunSelect.addEventListener('change', isiTanggal);
 bulanSelect.addEventListener('change', isiTanggal);
 tanggalSelect.addEventListener('change', tampilkanInfoTanggal);
 
-
-// =====================
-// VALIDASI FORM
-// =====================
-document.getElementById('formAbsensi').addEventListener('submit', function(e) {
-    let valid = true;
-    let message = "";
-
-    @foreach($karyawan as $k)
-        let status = document.querySelector('input[name="absensi[{{ $k->id }}]"]:checked');
-        let ket = document.querySelector('input[name="keterangan[{{ $k->id }}]"]');
-
-        if (!status) {
-            valid = false;
-            message = "Belum Mengisi Absen.";
-        } else if ((status.value === "Izin" || status.value === "Sakit") && ket.value.trim() === "") {
-            valid = false;
-            message = "Keterangan wajib diisi untuk Izin dan Sakit.";
-        }
-    @endforeach
-
-    if (!valid) {
-        e.preventDefault();
-        showToast(message, true);
-    }
-});
-
-// auto show/hide keterangan
-document.querySelectorAll('.statusRadio').forEach(r => {
-    r.addEventListener('change', function() {
+// === TAMPILKAN KETERANGAN OTOMATIS ===
+document.querySelectorAll('.statusRadio').forEach(radio => {
+    radio.addEventListener('change', function () {
         const row = this.closest('tr');
         const ket = row.querySelector('.ketInput');
 
-        if (['Izin','Sakit'].includes(this.value)) {
+        if (['Izin','Sakit','Alpha'].includes(this.value)) {
             ket.classList.remove('hidden');
         } else {
             ket.classList.add('hidden');
@@ -225,22 +192,6 @@ document.querySelectorAll('.statusRadio').forEach(r => {
         }
     });
 });
-
-function showToast(msg, error = false) {
-    const toast = document.getElementById('toast');
-    toast.textContent = msg;
-    toast.classList.remove('bg-green-600');
-    toast.classList.remove('bg-red-600');
-    toast.classList.add(error ? 'bg-red-600' : 'bg-green-600');
-
-    toast.style.opacity = "1";
-    setTimeout(() => toast.style.opacity = "0", 2500);
-}
-
-@if(session('status'))
-    showToast("{{ session('status') }}");
-@endif
-
 </script>
 
 @endsection

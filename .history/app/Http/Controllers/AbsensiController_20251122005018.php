@@ -198,7 +198,7 @@ document.getElementById('formAbsensi').addEventListener('submit', function(e) {
 
         if (!status) {
             valid = false;
-            message = "Belum Mengisi Absen.";
+            message = "Masih ada karyawan yang belum diisi absensinya.";
         } else if ((status.value === "Izin" || status.value === "Sakit") && ket.value.trim() === "") {
             valid = false;
             message = "Keterangan wajib diisi untuk Izin dan Sakit.";
