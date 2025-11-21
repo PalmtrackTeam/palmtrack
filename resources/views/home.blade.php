@@ -14,6 +14,29 @@
       pertumbuhan industri agribisnis di Indonesia.
     </p>
 
+    {{-- SLIDER FOTO --}}
+    <div class="relative w-full max-w-3xl mx-auto overflow-hidden rounded-xl shadow-md mt-8">
+
+      {{-- SLIDE WRAPPER --}}
+      <div id="slider" class="flex transition-transform duration-700">
+        <img src="{{ asset('images/slide1.jpg') }}" class="w-full object-cover" alt="Slide 1">
+        <img src="{{ asset('images/slide2.jpg') }}" class="w-full object-cover" alt="Slide 2">
+        <img src="{{ asset('images/slide3.jpg') }}" class="w-full object-cover" alt="Slide 3">
+      </div>
+
+      {{-- TOMBOL KIRI --}}
+      <button id="prevBtn"
+        class="absolute left-3 top-1/2 -translate-y-1/2 bg-gray-800/60 text-white p-2 rounded-full hover:bg-gray-800 transition">
+        &#10094;
+      </button>
+
+      {{-- TOMBOL KANAN --}}
+      <button id="nextBtn"
+        class="absolute right-3 top-1/2 -translate-y-1/2 bg-gray-800/60 text-white p-2 rounded-full hover:bg-gray-800 transition">
+        &#10095;
+      </button>
+    </div>
+
     <a href="/tentang"
        class="mt-6 inline-block bg-gray-800 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition shadow-sm">
       Pelajari Lebih Lanjut
@@ -65,4 +88,32 @@
     </div>
   </div>
 </section>
+
+{{-- SCRIPT SLIDER --}}
+<script>
+  const slider = document.getElementById('slider');
+  const totalSlides = slider.children.length;
+  let index = 0;
+
+  function showSlide(i) {
+    slider.style.transform = `translateX(-${i * 100}%)`;
+  }
+
+  document.getElementById('nextBtn').addEventListener('click', () => {
+    index = (index + 1) % totalSlides;
+    showSlide(index);
+  });
+
+  document.getElementById('prevBtn').addEventListener('click', () => {
+    index = (index - 1 + totalSlides) % totalSlides;
+    showSlide(index);
+  });
+
+  // Auto geser setiap 3 detik
+  setInterval(() => {
+    index = (index + 1) % totalSlides;
+    showSlide(index);
+  }, 3000);
+</script>
+
 @endsection
