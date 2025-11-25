@@ -2,47 +2,81 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
+    protected $table = 'users';
+    protected $primaryKey = 'id_user';
+
     protected $fillable = [
-        'name',
-        'email',
+        'username',
+        'email', // Pastikan email ada di fillable
         'password',
+        'nama_lengkap',
+        'jabatan',
+        'role',
+        'status_aktif',
+        'no_telepon',
+        'alamat',
+        'tanggal_bergabung',
+        'status_tinggal',
+        'bisa_input_panen',
+        'bisa_input_absen'
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
-        'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
+    protected $casts = [
+        'status_aktif' => 'boolean',
+        'bisa_input_panen' => 'boolean',
+        'bisa_input_absen' => 'boolean',
+        'tanggal_bergabung' => 'date',
+    ];
+
+    // Method untuk authentication dengan username
+    public function username()
     {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
+        return 'username';
+    }
+
+    // Method untuk password reset dengan email
+    public function getEmailForPasswordReset()
+    {
+        return $this->email;
+    }
+
+    // Untuk notifikasi
+    public function routeNotificationFor($driver)
+    {
+        if ($driver === 'mail') {
+            return $this->email;
+        }
+    }
+
+    public function isOwner()
+    {
+        return $this->role === 'owner';
+    }
+
+    public function isAdmin()
+    {
+        return $this->role === 'admin';
+    }
+
+    public function isKaryawan()
+    {
+        return $this->role === 'karyawan';
+    }
+
+    public function isAktif()
+    {
+        return $this->status_aktif === true;
     }
 }
