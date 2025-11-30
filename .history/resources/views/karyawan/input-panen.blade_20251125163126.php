@@ -15,7 +15,7 @@
                     <option value="">Pilih Blok Ladang</option>
                     @foreach($blokLadang as $blok)
                         <option value="{{ $blok->id_blok }}" {{ old('id_blok') == $blok->id_blok ? 'selected' : '' }}>
-                            {{ $blok->nama_blok }} ({{ $blok->luas }} )
+                            {{ $blok->nama_blok }} ({{ $blok->luas }} ha)
                         </option>
                     @endforeach
                 </select>

@@ -81,17 +81,15 @@
 
             <!-- PILIH BLOK -->
             <div class="mb-4">
-    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Lokasi *</label>
-    <select name="kategori" required
-            class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white px-3 py-2">
-        <option value="">Pilih Lokasi</option>
-        @foreach ($kategori as $k)
-            <option value="{{ $k->kategori }}">{{ ucfirst($k->kategori) }}</option>
-        @endforeach
-    </select>
-</div>
-
-
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Blok Ladang *</label>
+                <select name="id_blok" required
+                        class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white px-3 py-2">
+                    <option value="">Pilih Blok</option>
+                    @foreach ($blok as $b)
+                        <option value="{{ $b->id_blok }}">{{ $b->nama_blok }}</option>
+                    @endforeach
+                </select>
+            </div>
 
             <!-- No Telepon -->
             <div class="mb-4">

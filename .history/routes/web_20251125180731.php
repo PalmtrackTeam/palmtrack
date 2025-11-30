@@ -21,7 +21,7 @@ Route::get('/home', function () {
 
 // ==================== AUTH ROUTES ====================
 Route::get('/register', [RegisterController::class, 'showRegistrationForm'])->name('register');
-Route::post('/register', [RegisterController::class, 'register']); 
+Route::post('/register', [RegisterController::class, 'register']); un
 
 Route::get('login', [AuthenticatedSessionController::class, 'create'])->name('login');
 Route::post('login', [AuthenticatedSessionController::class, 'store']);

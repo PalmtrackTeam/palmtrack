@@ -12,18 +12,18 @@ use Illuminate\Support\Facades\Auth;
 class RegisterController extends Controller
 {
     /**
-     * Show register form
+     * Tampilkan halaman register
      */
     public function showRegistrationForm()
     {
-        // Ambil kategori unik (dekat, jauh)
-        $kategori = BlokLadang::select('kategori')->groupBy('kategori')->get();
+        // Ambil kategori unik (dekat / jauh)
+        $blok = BlokLadang::select('kategori')->groupBy('kategori')->get();
 
-        return view('auth.register', compact('kategori'));
+        return view('auth.register', compact('blok'));
     }
 
     /**
-     * Register process
+     * Proses register
      */
     public function register(Request $request)
     {
@@ -33,30 +33,33 @@ class RegisterController extends Controller
             'email'          => 'required|string|email|max:255|unique:users,email',
             'password'       => 'required|string|min:8|confirmed',
 
-            // kategori dekat/jauh
-            'kategori'       => 'required|in:dekat,jauh',
+            // user memilih dekat / jauh
+            'id_blok'        => 'required|string|in:dekat,jauh',
 
             'no_telepon'     => 'nullable|string|max:20',
             'alamat'         => 'nullable|string',
         ]);
 
-        // AMBIL id_blok berdasarkan kategori
-        $blok = BlokLadang::where('kategori', $request->kategori)->first();
+        // Pilih salah satu blok berdasarkan kategori
+        $blok = BlokLadang::where('kategori', $request->id_blok)
+            ->inRandomOrder()
+            ->first();
 
         if (!$blok) {
-            return back()->withErrors(['kategori' => 'Kategori blok tidak ditemukan!']);
+            return back()->withErrors(['id_blok' => 'Kategori blok tidak ditemukan dalam database!']);
         }
 
-        // SAVE user
+        // Simpan user baru
         $user = User::create([
             'username'       => $request->username,
             'nama_lengkap'   => $request->nama_lengkap,
             'email'          => $request->email,
             'password'       => Hash::make($request->password),
 
-            'role'           => 'karyawan', // otomatis
+            // otomatis selalu jadi karyawan (register umum)
+            'role'           => 'karyawan',
 
-            // INILAH YANG MASUK KE TABLE
+            // isi id_blok dari hasil random blok
             'id_blok'        => $blok->id_blok,
 
             'status_aktif'   => true,
@@ -64,6 +67,7 @@ class RegisterController extends Controller
             'alamat'         => $request->alamat,
             'tanggal_bergabung' => now(),
 
+            // akses default karyawan
             'bisa_input_panen' => true,
             'bisa_input_absen' => true,
         ]);

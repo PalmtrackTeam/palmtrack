@@ -28,6 +28,7 @@ class User extends Authenticatable
     'bisa_input_absen',
 ];
 
+    ];
 
     protected $hidden = [
         'password',

@@ -11,20 +11,13 @@ use Illuminate\Support\Facades\Auth;
 
 class RegisterController extends Controller
 {
-    /**
-     * Show register form
-     */
     public function showRegistrationForm()
     {
         // Ambil kategori unik (dekat, jauh)
-        $kategori = BlokLadang::select('kategori')->groupBy('kategori')->get();
-
-        return view('auth.register', compact('kategori'));
+        $blok = BlokLadang::select('kategori')->groupBy('kategori')->get();
+        return view('auth.register', compact('blok'));
     }
 
-    /**
-     * Register process
-     */
     public function register(Request $request)
     {
         $request->validate([
@@ -33,30 +26,28 @@ class RegisterController extends Controller
             'email'          => 'required|string|email|max:255|unique:users,email',
             'password'       => 'required|string|min:8|confirmed',
 
-            // kategori dekat/jauh
-            'kategori'       => 'required|in:dekat,jauh',
+            // user memilih "dekat" / "jauh"
+            'id_blok'        => 'required|string|in:dekat,jauh',
 
             'no_telepon'     => 'nullable|string|max:20',
             'alamat'         => 'nullable|string',
         ]);
 
-        // AMBIL id_blok berdasarkan kategori
-        $blok = BlokLadang::where('kategori', $request->kategori)->first();
+        // Cari id_blok berdasarkan kategori
+        $blok = BlokLadang::where('kategori', $request->id_blok)->first();
 
         if (!$blok) {
-            return back()->withErrors(['kategori' => 'Kategori blok tidak ditemukan!']);
+            return back()->withErrors(['id_blok' => 'Kategori blok tidak ditemukan!']);
         }
 
-        // SAVE user
+        // buat user
         $user = User::create([
             'username'       => $request->username,
             'nama_lengkap'   => $request->nama_lengkap,
             'email'          => $request->email,
             'password'       => Hash::make($request->password),
 
-            'role'           => 'karyawan', // otomatis
-
-            // INILAH YANG MASUK KE TABLE
+            'role'           => 'karyawan',
             'id_blok'        => $blok->id_blok,
 
             'status_aktif'   => true,

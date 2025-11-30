@@ -12,18 +12,18 @@ use Illuminate\Support\Facades\Auth;
 class RegisterController extends Controller
 {
     /**
-     * Show register form
+     * Tampilkan halaman register
      */
     public function showRegistrationForm()
     {
         // Ambil kategori unik (dekat, jauh)
-        $kategori = BlokLadang::select('kategori')->groupBy('kategori')->get();
+        $blok = BlokLadang::select('kategori')->groupBy('kategori')->get();
 
-        return view('auth.register', compact('kategori'));
+        return view('auth.register', compact('blok'));
     }
 
     /**
-     * Register process
+     * Proses register
      */
     public function register(Request $request)
     {
@@ -32,38 +32,38 @@ class RegisterController extends Controller
             'nama_lengkap'   => 'required|string|max:255',
             'email'          => 'required|string|email|max:255|unique:users,email',
             'password'       => 'required|string|min:8|confirmed',
-
-            // kategori dekat/jauh
-            'kategori'       => 'required|in:dekat,jauh',
-
+            'id_blok'        => 'required|string|in:dekat,jauh', // user memilih kategori
             'no_telepon'     => 'nullable|string|max:20',
             'alamat'         => 'nullable|string',
         ]);
 
-        // AMBIL id_blok berdasarkan kategori
-        $blok = BlokLadang::where('kategori', $request->kategori)->first();
+        // Cari id_blok berdasarkan kategori
+        $blok = BlokLadang::where('kategori', $request->id_blok)->first();
 
         if (!$blok) {
-            return back()->withErrors(['kategori' => 'Kategori blok tidak ditemukan!']);
+            return back()->withErrors(['id_blok' => 'Kategori blok tidak ditemukan!']);
         }
 
-        // SAVE user
+        // Simpan user baru
         $user = User::create([
             'username'       => $request->username,
             'nama_lengkap'   => $request->nama_lengkap,
             'email'          => $request->email,
             'password'       => Hash::make($request->password),
 
-            'role'           => 'karyawan', // otomatis
+            // otomatis selalu jadi karyawan
+            'role'           => 'karyawan',
 
-            // INILAH YANG MASUK KE TABLE
+            // simpan id_blok sesuai kategori yang dipilih
             'id_blok'        => $blok->id_blok,
 
+            // atribut lain
             'status_aktif'   => true,
             'no_telepon'     => $request->no_telepon,
             'alamat'         => $request->alamat,
             'tanggal_bergabung' => now(),
 
+            // izin default karyawan
             'bisa_input_panen' => true,
             'bisa_input_absen' => true,
         ]);

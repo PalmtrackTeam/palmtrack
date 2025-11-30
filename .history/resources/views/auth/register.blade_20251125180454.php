@@ -80,7 +80,7 @@
             </div>
 
             <!-- PILIH BLOK -->
-            <div class="mb-4">
+            <<div class="mb-4">
     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Lokasi *</label>
     <select name="kategori" required
             class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white px-3 py-2">

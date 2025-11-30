@@ -20,6 +20,7 @@ return new class extends Migration
 
             // Data lengkap
             $table->string('nama_lengkap', 100);
+            $table->enum('jabatan', ['mandor', 'asisten_mandor', 'anggota'])->default('anggota');
             $table->enum('role', ['owner', 'admin', 'karyawan'])->default('karyawan');
             $table->boolean('status_aktif')->default(true);
             $table->string('no_telepon', 20)->nullable();

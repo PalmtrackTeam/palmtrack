@@ -11,8 +11,27 @@ use Illuminate\Support\Facades\Auth;
 
 class RegisterController extends Controller
 {
+    public function showRegistrationForm()
+    {
+        $kategori = BlokLadang::select('kategori')->groupBy('kategori')->get();
+        return view('auth.register', compact('kategori'));
+    }
+
+    <?php
+
+namespace App\Http\Controllers\Auth;
+
+use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Models\BlokLadang;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
+
+class RegisterController extends Controller
+{
     /**
-     * Show register form
+     * Tampilkan halaman register
      */
     public function showRegistrationForm()
     {
@@ -23,7 +42,7 @@ class RegisterController extends Controller
     }
 
     /**
-     * Register process
+     * Proses register
      */
     public function register(Request $request)
     {
@@ -33,31 +52,29 @@ class RegisterController extends Controller
             'email'          => 'required|string|email|max:255|unique:users,email',
             'password'       => 'required|string|min:8|confirmed',
 
-            // kategori dekat/jauh
+            // Kategori yang dikirim dari form
             'kategori'       => 'required|in:dekat,jauh',
 
             'no_telepon'     => 'nullable|string|max:20',
             'alamat'         => 'nullable|string',
         ]);
 
-        // AMBIL id_blok berdasarkan kategori
+        // Ambil blok pertama berdasarkan kategori (misal dekat → ambil blok A)
         $blok = BlokLadang::where('kategori', $request->kategori)->first();
 
         if (!$blok) {
             return back()->withErrors(['kategori' => 'Kategori blok tidak ditemukan!']);
         }
 
-        // SAVE user
+        // Simpan user
         $user = User::create([
             'username'       => $request->username,
             'nama_lengkap'   => $request->nama_lengkap,
             'email'          => $request->email,
             'password'       => Hash::make($request->password),
 
-            'role'           => 'karyawan', // otomatis
-
-            // INILAH YANG MASUK KE TABLE
-            'id_blok'        => $blok->id_blok,
+            'role'           => 'karyawan', // otomatis karyawan
+            'id_blok'        => $blok->id_blok, // ID blok valid, tidak null
 
             'status_aktif'   => true,
             'no_telepon'     => $request->no_telepon,
