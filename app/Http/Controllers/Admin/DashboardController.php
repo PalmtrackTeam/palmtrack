@@ -9,9 +9,6 @@ use App\Models\Absensi;
 use App\Models\Pemasukan;
 use App\Models\Pengeluaran;
 use App\Models\PengeluaranPupuk;
-// HAPUS MODEL YANG TIDAK ADA
-// use App\Models\PengeluaranTransportasi;
-// use App\Models\PengeluaranPerawatan;
 use App\Models\LaporanMasalah;
 use App\Models\BlokLadang;
 use Illuminate\Http\Request;
@@ -265,63 +262,147 @@ class DashboardController extends Controller
     {
         return view('admin.input-pemasukan');
     }
-
-    public function storePemasukan(Request $request)
-    {
-        try {
-            $request->validate([
-                'tanggal' => 'required|date',
-                'sumber_pemasukan' => 'required|in:penjualan_buah,lainnya',
-                'total_pemasukan' => 'required|numeric|min:0',
-                'keterangan' => 'required|string|max:500'
-            ]);
-
-            Pemasukan::create([
-                'tanggal' => $request->tanggal,
-                'sumber_pemasukan' => $request->sumber_pemasukan,
-                'total_pemasukan' => $request->total_pemasukan,
-                'keterangan' => $request->keterangan,
-                'id_user_pencatat' => auth()->id(),
-                'status_verifikasi' => false
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Pemasukan berhasil dicatat dan menunggu verifikasi owner'
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Gagal mencatat pemasukan: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    public function riwayatPemasukan(Request $request)
-    {
-        $startDate = $request->get('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
-        $endDate = $request->get('end_date', Carbon::now()->endOfMonth()->format('Y-m-d'));
-
-        $pemasukan = Pemasukan::with(['pencatat'])
-            ->whereBetween('tanggal', [$startDate, $endDate])
-            ->where('id_user_pencatat', auth()->id())
-            ->orderBy('tanggal', 'desc')
-            ->orderBy('id_pemasukan', 'desc')
-            ->get();
-
-        return view('admin.riwayat-pemasukan', [
-            'pemasukan' => $pemasukan,
-            'start_date' => $startDate,
-            'end_date' => $endDate
+public function storePemasukan(Request $request)
+{
+    try {
+        $validated = $request->validate([
+            'tanggal' => 'required|date',
+            'sumber_pemasukan' => 'required|in:penjualan_buah,lainnya',
+            'total_pemasukan' => 'required|numeric|min:0',
+            'keterangan' => 'nullable|string|max:500',
         ]);
+
+        Pemasukan::create([
+            'tanggal' => $validated['tanggal'],
+            'sumber_pemasukan' => $validated['sumber_pemasukan'],
+            'total_pemasukan' => $validated['total_pemasukan'],
+            'keterangan' => $validated['keterangan'] ?? null,
+            'id_user_pencatat' => auth()->id(),
+            // kolom status_verifikasi dihapus karena tidak dipakai
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Pemasukan berhasil dicatat!'
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Gagal mencatat pemasukan: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+public function showPemasukan($id)
+{
+    $pemasukan = Pemasukan::with('pencatat', 'penjualan')->find($id);
+
+    if (!$pemasukan) {
+        return response()->json(['error' => 'Data tidak ditemukan'], 404);
     }
 
+    return response()->json([
+        'id_pemasukan' => $pemasukan->id_pemasukan,
+        'tanggal' => $pemasukan->tanggal,
+        'sumber_pemasukan' => $pemasukan->sumber_pemasukan,
+        'sumber_pemasukan_text' => $pemasukan->sumber_pemasukan_text,
+        'total_pemasukan' => $pemasukan->total_pemasukan,
+        'keterangan' => $pemasukan->keterangan,
+        'pencatat' => [
+            'name' => $pemasukan->pencatat->name ?? 'N/A'
+        ],
+        'created_at' => $pemasukan->created_at,
+        'penjualan' => $pemasukan->penjualan ?? null
+    ]);
+}
+public function destroyPemasukan($id)
+{
+    try {
+        $pemasukan = Pemasukan::findOrFail($id);
+        $pemasukan->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Data pemasukan berhasil dihapus.'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Gagal menghapus data: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+// app/Http/Controllers/Admin/DashboardController.php
+public function riwayatPemasukan(Request $request)
+{
+    $query = Pemasukan::with('pencatat')->latest();
+    
+    // Filter tanggal
+    if ($request->has('tanggal_awal') && $request->tanggal_awal) {
+        $query->whereDate('tanggal', '>=', $request->tanggal_awal);
+    }
+    
+    if ($request->has('tanggal_akhir') && $request->tanggal_akhir) {
+        $query->whereDate('tanggal', '<=', $request->tanggal_akhir);
+    }
+    
+    // Filter sumber pemasukan
+    if ($request->has('sumber_pemasukan') && $request->sumber_pemasukan) {
+        $query->where('sumber_pemasukan', $request->sumber_pemasukan);
+    }
+    
+    // Filter status verifikasi
+    if ($request->has('status_verifikasi') && $request->status_verifikasi !== '') {
+        $query->where('status_verifikasi', $request->status_verifikasi);
+    }
+    
+    // Gunakan pagination, jangan get()
+    $pemasukan = $query->paginate(10); // 10 item per halaman
+    
+    return view('admin.riwayat-pemasukan', compact('pemasukan'));
+}
     public function inputLaporanMasalah()
     {
         return view('admin.input-laporan-masalah');
     }
-
+// app/Http/Controllers/Admin/DashboardController.php
+public function cetakLaporanPemasukan(Request $request)
+{
+    $query = Pemasukan::with('pencatat')->latest();
+    
+    // Filter berdasarkan parameter
+    if ($request->has('tanggal_awal') && $request->tanggal_awal) {
+        $query->whereDate('tanggal', '>=', $request->tanggal_awal);
+    }
+    
+    if ($request->has('tanggal_akhir') && $request->tanggal_akhir) {
+        $query->whereDate('tanggal', '<=', $request->tanggal_akhir);
+    }
+    
+    if ($request->has('sumber_pemasukan') && $request->sumber_pemasukan) {
+        $query->where('sumber_pemasukan', $request->sumber_pemasukan);
+    }
+    
+    if ($request->has('status_verifikasi') && $request->status_verifikasi !== '') {
+        $query->where('status_verifikasi', $request->status_verifikasi);
+    }
+    
+    $pemasukan = $query->get();
+    
+    // Hitung total
+    $totalPemasukan = $pemasukan->sum('total_pemasukan');
+    $totalPenjualan = $pemasukan->where('sumber_pemasukan', 'penjualan_buah')->sum('total_pemasukan');
+    $totalLainnya = $pemasukan->where('sumber_pemasukan', 'lainnya')->sum('total_pemasukan');
+    
+    return view('admin.cetak.pemasukan', compact(
+        'pemasukan', 
+        'totalPemasukan',
+        'totalPenjualan', 
+        'totalLainnya'
+    ));
+}
     public function storeLaporanMasalah(Request $request)
     {
         try {
@@ -413,6 +494,18 @@ class DashboardController extends Controller
     {
         return view('admin.input-pengeluaran');
     }
+public function editPengeluaran($id)
+{
+    $pengeluaran = Pengeluaran::findOrFail($id);
+    return view('admin.edit-pengeluaran', compact('pengeluaran'));
+}
+
+public function updatePengeluaran(Request $request, $id)
+{
+    $pengeluaran = Pengeluaran::findOrFail($id);
+    $pengeluaran->update($request->all());
+    return redirect()->route('admin.riwayat-pengeluaran')->with('success', 'Pengeluaran berhasil diupdate');
+}
 
     public function storePupuk(Request $request)
     {
@@ -577,25 +670,6 @@ class DashboardController extends Controller
         }
     }
 
-    public function riwayatPengeluaran(Request $request)
-    {
-        $startDate = $request->get('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
-        $endDate = $request->get('end_date', Carbon::now()->endOfMonth()->format('Y-m-d'));
-
-        $pengeluaran = Pengeluaran::with(['pencatat', 'pupuk'])
-            ->whereBetween('tanggal', [$startDate, $endDate])
-            ->where('id_user_pencatat', auth()->id())
-            ->orderBy('tanggal', 'desc')
-            ->orderBy('id_pengeluaran', 'desc')
-            ->get();
-
-        return view('admin.riwayat-pengeluaran', [
-            'pengeluaran' => $pengeluaran,
-            'start_date' => $startDate,
-            'end_date' => $endDate
-        ]);
-    }
-
     public function rekapProduktivitas(Request $request)
     {
         $startDate = $request->get('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
@@ -706,5 +780,436 @@ class DashboardController extends Controller
                 'message' => 'Gagal mengambil data statistik'
             ], 500);
         }
+    }
+
+    // =================================================================
+    // METHOD BARU UNTUK RIWAYAT PENGELUARAN
+    // =================================================================
+
+    /**
+     * Menampilkan halaman riwayat pengeluaran
+     */
+public function riwayatPengeluaran(Request $request)
+{
+    $startDate = $request->get('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
+    $endDate = $request->get('end_date', Carbon::now()->endOfMonth()->format('Y-m-d'));
+    $jenis = $request->get('jenis', 'semua');
+
+    $pengeluaranQuery = Pengeluaran::with(['pencatat'])
+        ->whereBetween('tanggal', [$startDate, $endDate])
+        ->where('id_user_pencatat', auth()->id());
+
+    if ($jenis !== 'semua') {
+        $pengeluaranQuery->where('jenis_pengeluaran', $jenis);
+    }
+
+    $pengeluaran = $pengeluaranQuery->orderBy('tanggal', 'desc')
+        ->orderBy('id_pengeluaran', 'desc')
+        ->paginate(10);
+
+    $summary = $this->getPengeluaranSummary($startDate, $endDate);
+
+    return view('admin.riwayat-pengeluaran', [
+        'pengeluaran' => $pengeluaran,
+        'start_date' => $startDate,
+        'end_date' => $endDate,
+        'jenis_filter' => $jenis,
+        'summary' => $summary
+    ]);
+}
+    /**
+     * API untuk mendapatkan data pengeluaran berdasarkan jenis
+     */
+    public function getPengeluaranByJenis($jenis, Request $request)
+    {
+        try {
+            $startDate = $request->get('start_date');
+            $endDate = $request->get('end_date');
+            
+            $query = Pengeluaran::with(['pencatat'])
+                ->where('id_user_pencatat', auth()->id());
+
+            if ($startDate && $endDate) {
+                $query->whereBetween('tanggal', [$startDate, $endDate]);
+            }
+
+            $data = [];
+            $summary = $this->getPengeluaranSummary($startDate, $endDate);
+
+            switch ($jenis) {
+                case 'semua':
+                    $data = $query->orderBy('tanggal', 'desc')->get();
+                    break;
+                    
+                case 'pupuk':
+                    $data = $query->with(['pupuk'])
+                        ->where('jenis_pengeluaran', 'pupuk')
+                        ->orderBy('tanggal', 'desc')
+                        ->get()
+                        ->map(function ($item) {
+                            $item->jenis_pupuk = $item->pupuk->jenis_pupuk ?? '-';
+                            $item->jumlah = $item->pupuk->jumlah ?? 0;
+                            $item->harga_satuan = $item->pupuk->harga_satuan ?? 0;
+                            $item->total_harga = $item->pupuk->total_harga ?? 0;
+                            return $item;
+                        });
+                    break;
+                    
+                case 'transportasi':
+                    // Karena tabel transportasi tidak ada, kita gunakan data dari pengeluaran dengan jenis transportasi
+                    $data = $query->where('jenis_pengeluaran', 'transportasi')
+                        ->orderBy('tanggal', 'desc')
+                        ->get()
+                        ->map(function ($item) {
+                            // Parse tujuan dari keterangan atau gunakan field default
+                            $item->tujuan = $this->parseTujuanFromKeterangan($item->keterangan);
+                            $item->biaya = $item->total_biaya;
+                            return $item;
+                        });
+                    break;
+                    
+                case 'perawatan':
+                    // Karena tabel perawatan tidak ada, kita gunakan data dari pengeluaran dengan jenis perawatan
+                    $data = $query->where('jenis_pengeluaran', 'perawatan')
+                        ->orderBy('tanggal', 'desc')
+                        ->get()
+                        ->map(function ($item) {
+                            // Parse jenis perawatan dari keterangan
+                            $item->jenis_perawatan = $this->parseJenisPerawatanFromKeterangan($item->keterangan);
+                            $item->biaya = $item->total_biaya;
+                            return $item;
+                        });
+                    break;
+                    
+                case 'gaji':
+                    // Untuk gaji, kita perlu query khusus
+                    $data = $this->getPengeluaranGaji($startDate, $endDate);
+                    break;
+                    
+                case 'lainnya':
+                    $data = $query->where('jenis_pengeluaran', 'lainnya')
+                        ->orderBy('tanggal', 'desc')
+                        ->get();
+                    break;
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $data,
+                'summary' => $summary
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memuat data: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * API untuk mendapatkan detail pengeluaran
+     */
+public function getDetailPengeluaran($id)
+{
+    try {
+        $pengeluaran = Pengeluaran::with([
+            'pencatat',
+            'pupuk',
+            'transportasi', 
+            'perawatan',
+            'gaji.karyawan'
+        ])->where('id_pengeluaran', $id)
+          ->where('id_user_pencatat', auth()->id())
+          ->first();
+
+        if (!$pengeluaran) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data tidak ditemukan'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $pengeluaran
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Gagal memuat detail: ' . $e->getMessage()
+        ], 500);
+    }
+}
+// app/Http/Controllers/PengeluaranController.php
+public function getDetail($id)
+{
+    try {
+        $pengeluaran = Pengeluaran::with(['pupuk', 'transportasi', 'perawatan', 'gaji', 'pencatat'])
+            ->findOrFail($id);
+
+        return response()->json([
+            'success' => true,
+            'data' => $pengeluaran,
+            'message' => 'Data detail berhasil diambil'
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Data tidak ditemukan',
+            'error' => $e->getMessage()
+        ], 404);
+    }
+}
+    /**
+     * API untuk menghapus pengeluaran
+     */
+    public function deletePengeluaran($id)
+    {
+        try {
+            DB::beginTransaction();
+
+            $pengeluaran = Pengeluaran::where('id_pengeluaran', $id)
+                ->where('id_user_pencatat', auth()->id())
+                ->first();
+
+            if (!$pengeluaran) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Data tidak ditemukan'
+                ], 404);
+            }
+
+            // Hapus data terkait di pengeluaran_pupuk jika ada
+            if ($pengeluaran->jenis_pengeluaran === 'pupuk') {
+                PengeluaranPupuk::where('id_pengeluaran', $id)->delete();
+            }
+
+            // Hapus data utama
+            $pengeluaran->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Data pengeluaran berhasil dihapus'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus data: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Export data pengeluaran ke Excel
+     */
+    public function exportPengeluaran(Request $request)
+    {
+        try {
+            $startDate = $request->get('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
+            $endDate = $request->get('end_date', Carbon::now()->endOfMonth()->format('Y-m-d'));
+            $jenis = $request->get('jenis', 'semua');
+
+            $pengeluaran = Pengeluaran::with(['pencatat', 'pupuk'])
+                ->whereBetween('tanggal', [$startDate, $endDate])
+                ->where('id_user_pencatat', auth()->id());
+
+            if ($jenis !== 'semua') {
+                $pengeluaran->where('jenis_pengeluaran', $jenis);
+            }
+
+            $data = $pengeluaran->orderBy('tanggal', 'desc')
+                ->orderBy('id_pengeluaran', 'desc')
+                ->get();
+
+            // Format data untuk export
+          $exportData = $data->map(function ($item) {
+    $row = [
+        'Tanggal' => $item->tanggal,
+        'Jenis Pengeluaran' => $this->formatJenisPengeluaran($item->jenis_pengeluaran),
+        'Total Biaya' => 'Rp ' . number_format((float)($item->total_biaya ?? 0), 0, ',', '.'),
+        'Keterangan' => $item->keterangan,
+        'Pencatat' => $item->pencatat->nama_lengkap ?? '-',
+        'Status Verifikasi' => $item->status_verifikasi ? 'Terverifikasi' : 'Menunggu Verifikasi'
+    ];
+
+    // Tambahkan kolom khusus berdasarkan jenis
+    if ($item->jenis_pengeluaran === 'pupuk' && $item->pupuk) {
+        $row['Jenis Pupuk'] = $item->pupuk->jenis_pupuk;
+        $row['Jumlah'] = $item->pupuk->jumlah . ' kg';
+        $row['Harga Satuan'] = 'Rp ' . number_format((float)($item->pupuk->harga_satuan ?? 0), 0, ',', '.');
+    }
+
+    return $row;
+});
+
+            return response()->json([
+                'success' => true,
+                'data' => $exportData,
+                'filename' => 'pengeluaran_' . $startDate . '_to_' . $endDate . '.xlsx'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal export data: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // =================================================================
+    // HELPER METHODS
+    // =================================================================
+
+    /**
+     * Helper method untuk mendapatkan summary pengeluaran
+     */
+    private function getPengeluaranSummary($startDate = null, $endDate = null)
+    {
+        $query = Pengeluaran::where('id_user_pencatat', auth()->id());
+
+        if ($startDate && $endDate) {
+            $query->whereBetween('tanggal', [$startDate, $endDate]);
+        } else {
+            // Default bulan ini
+            $firstDay = date('Y-m-01');
+            $lastDay = date('Y-m-t');
+            $query->whereBetween('tanggal', [$firstDay, $lastDay]);
+        }
+
+        $results = $query->select(
+            DB::raw('COALESCE(SUM(total_biaya), 0) as total'),
+            DB::raw('COALESCE(SUM(CASE WHEN jenis_pengeluaran = "pupuk" THEN total_biaya ELSE 0 END), 0) as pupuk'),
+            DB::raw('COALESCE(SUM(CASE WHEN jenis_pengeluaran = "transportasi" THEN total_biaya ELSE 0 END), 0) as transportasi'),
+            DB::raw('COALESCE(SUM(CASE WHEN jenis_pengeluaran = "perawatan" THEN total_biaya ELSE 0 END), 0) as perawatan'),
+            DB::raw('COALESCE(SUM(CASE WHEN jenis_pengeluaran = "gaji" THEN total_biaya ELSE 0 END), 0) as gaji'),
+            DB::raw('COALESCE(SUM(CASE WHEN jenis_pengeluaran = "lainnya" THEN total_biaya ELSE 0 END), 0) as lainnya')
+        )->first();
+
+        return [
+            'total' => $results->total,
+            'pupuk' => $results->pupuk,
+            'transportasi' => $results->transportasi,
+            'perawatan' => $results->perawatan,
+            'gaji' => $results->gaji,
+            'lainnya' => $results->lainnya
+        ];
+    }
+
+    /**
+     * Helper method untuk parse tujuan dari keterangan transportasi
+     */
+    private function parseTujuanFromKeterangan($keterangan)
+    {
+        if (strpos($keterangan, 'Transportasi - ') !== false) {
+            return str_replace('Transportasi - ', '', $keterangan);
+        }
+        return $keterangan ?: 'Transportasi';
+    }
+
+    /**
+     * Helper method untuk parse jenis perawatan dari keterangan
+     */
+    private function parseJenisPerawatanFromKeterangan($keterangan)
+    {
+        if (strpos($keterangan, 'Perawatan - ') !== false) {
+            return str_replace('Perawatan - ', '', $keterangan);
+        }
+        return $keterangan ?: 'Perawatan';
+    }
+
+    /**
+     * Helper method untuk mendapatkan data pengeluaran gaji
+     */
+    private function getPengeluaranGaji($startDate = null, $endDate = null)
+    {
+        // Karena tabel pengeluaran_gaji tidak ada, kita hitung dari panen yang sudah diverifikasi
+        $query = PanenHarian::with(['user'])
+            ->where('status_panen', 'diverifikasi')
+            ->where('id_user_pencatat', auth()->id());
+
+        if ($startDate && $endDate) {
+            $query->whereBetween('tanggal', [$startDate, $endDate]);
+        }
+
+        $data = $query->select(
+            'id_user',
+            DB::raw('SUM(total_upah) as total_gaji'),
+            DB::raw('MIN(tanggal) as tanggal_awal'),
+            DB::raw('MAX(tanggal) as tanggal_akhir')
+        )
+        ->groupBy('id_user')
+        ->get()
+        ->map(function ($item) {
+            return [
+                'id_pengeluaran' => 'GJI-' . $item->id_user,
+                'tanggal' => $item->tanggal_akhir,
+                'nama_karyawan' => $item->user->nama_lengkap ?? 'Unknown',
+                'periode' => $item->tanggal_awal . ' s/d ' . $item->tanggal_akhir,
+                'total_gaji' => $item->total_gaji,
+                'jenis_pengeluaran' => 'gaji'
+            ];
+        });
+
+        return $data;
+    }
+
+    /**
+     * Helper method untuk mendapatkan detail gaji
+     */
+    private function getDetailGaji($id)
+    {
+        // Extract user ID dari ID gaji (format: GJI-{user_id})
+        $userId = str_replace('GJI-', '', $id);
+        
+        $gajiData = PanenHarian::with(['user', 'blok'])
+            ->where('id_user', $userId)
+            ->where('status_panen', 'diverifikasi')
+            ->where('id_user_pencatat', auth()->id())
+            ->select(
+                'id_user',
+                DB::raw('SUM(total_upah) as total_gaji'),
+                DB::raw('COUNT(*) as total_panen'),
+                DB::raw('SUM(jumlah_kg) as total_kg'),
+                DB::raw('MIN(tanggal) as tanggal_awal'),
+                DB::raw('MAX(tanggal) as tanggal_akhir')
+            )
+            ->groupBy('id_user')
+            ->first();
+
+        if (!$gajiData) {
+            return null;
+        }
+
+        return [
+            'nama_karyawan' => $gajiData->user->nama_lengkap ?? 'Unknown',
+            'periode' => $gajiData->tanggal_awal . ' s/d ' . $gajiData->tanggal_akhir,
+            'total_gaji' => $gajiData->total_gaji,
+            'total_panen' => $gajiData->total_panen,
+            'total_kg' => $gajiData->total_kg,
+            'rata_kg_per_panen' => $gajiData->total_panen > 0 ? $gajiData->total_kg / $gajiData->total_panen : 0
+        ];
+    }
+
+    /**
+     * Helper method untuk format jenis pengeluaran
+     */
+    private function formatJenisPengeluaran($jenis)
+    {
+        $jenisMap = [
+            'pupuk' => 'Pupuk',
+            'transportasi' => 'Transportasi',
+            'perawatan' => 'Perawatan',
+            'gaji' => 'Gaji',
+            'lainnya' => 'Lainnya'
+        ];
+
+        return $jenisMap[$jenis] ?? $jenis;
     }
 }

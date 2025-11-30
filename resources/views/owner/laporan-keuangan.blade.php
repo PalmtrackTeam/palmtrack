@@ -64,7 +64,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-gray-600">Total Pemasukan</p>
-                    <p class="text-2xl font-bold text-green-600">Rp {{ number_format($pemasukan_bulan_ini, 0, ',', '.') }}</p>
+                    <p class="text-2xl font-bold text-green-600">Rp {{ number_format($total_pemasukan, 0, ',', '.') }}</p>
                 </div>
                 <div class="p-3 bg-green-100 rounded-lg">
                     <i class="fas fa-arrow-down text-green-600 text-xl"></i>
@@ -87,7 +87,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-gray-600">Total Pengeluaran</p>
-                    <p class="text-2xl font-bold text-red-600">Rp {{ number_format($pengeluaran_bulan_ini, 0, ',', '.') }}</p>
+                    <p class="text-2xl font-bold text-red-600">Rp {{ number_format($total_pengeluaran, 0, ',', '.') }}</p>
                 </div>
                 <div class="p-3 bg-red-100 rounded-lg">
                     <i class="fas fa-arrow-up text-red-600 text-xl"></i>
@@ -111,7 +111,7 @@
                 <div>
                     <p class="text-sm font-medium text-gray-600">Laba Bersih</p>
                     @php
-                        $laba_bersih = $pemasukan_bulan_ini - $pengeluaran_bulan_ini;
+                        $laba_bersih = $total_pemasukan - $total_pengeluaran;
                         $text_color = $laba_bersih >= 0 ? 'text-blue-600' : 'text-red-600';
                     @endphp
                     <p class="text-2xl font-bold {{ $text_color }}">Rp {{ number_format($laba_bersih, 0, ',', '.') }}</p>
@@ -129,7 +129,7 @@
                 <div>
                     <p class="text-sm font-medium text-gray-600">Margin Keuntungan</p>
                     @php
-                        $margin = $pemasukan_bulan_ini > 0 ? ($laba_bersih / $pemasukan_bulan_ini) * 100 : 0;
+                        $margin = $total_pemasukan > 0 ? ($laba_bersih / $total_pemasukan) * 100 : 0;
                         $margin_color = $margin >= 20 ? 'text-purple-600' : ($margin >= 10 ? 'text-yellow-600' : 'text-red-600');
                     @endphp
                     <p class="text-2xl font-bold {{ $margin_color }}">{{ number_format($margin, 1) }}%</p>
@@ -151,24 +151,42 @@
             </div>
             <div class="p-6">
                 <div class="space-y-4">
-                    @foreach($penjualan_bulan_ini as $penjualan)
+                    <!-- Pemasukan Penjualan Buah -->
+                    @foreach($pemasukan_penjualan_buah as $pemasukan)
                     <div class="flex justify-between items-center p-4 bg-green-50 rounded-lg border border-green-200">
                         <div>
-                            <p class="font-medium text-green-800">{{ $penjualan->pembeli }}</p>
+                            <p class="font-medium text-green-800">Penjualan Buah</p>
                             <p class="text-sm text-green-600">
-                                {{ $penjualan->tujuan_jual }} - 
-                                {{ number_format($penjualan->total_berat_kg, 0, ',', '.') }} kg
+                                {{ $pemasukan->keterangan ?: 'Penjualan buah' }}
                             </p>
-                            <p class="text-xs text-green-500 mt-1">{{ $penjualan->tanggal->format('d M Y') }}</p>
+                            <p class="text-xs text-green-500 mt-1">
+                                {{ \Carbon\Carbon::parse($pemasukan->tanggal)->format('d M Y') }}
+                            </p>
                         </div>
-                        <p class="font-bold text-green-700">Rp {{ number_format($penjualan->total_pemasukan, 0, ',', '.') }}</p>
+                        <p class="font-bold text-green-700">Rp {{ number_format($pemasukan->total_pemasukan, 0, ',', '.') }}</p>
+                    </div>
+                    @endforeach
+
+                    <!-- Pemasukan Lainnya -->
+                    @foreach($pemasukan_lainnya as $pemasukan)
+                    <div class="flex justify-between items-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <div>
+                            <p class="font-medium text-blue-800">{{ $pemasukan->sumber_pemasukan }}</p>
+                            <p class="text-sm text-blue-600">
+                                {{ $pemasukan->keterangan ?: 'Pemasukan lainnya' }}
+                            </p>
+                            <p class="text-xs text-blue-500 mt-1">
+                                {{ \Carbon\Carbon::parse($pemasukan->tanggal)->format('d M Y') }}
+                            </p>
+                        </div>
+                        <p class="font-bold text-blue-700">Rp {{ number_format($pemasukan->total_pemasukan, 0, ',', '.') }}</p>
                     </div>
                     @endforeach
                     
-                    @if($penjualan_bulan_ini->isEmpty())
+                    @if($pemasukan_penjualan_buah->isEmpty() && $pemasukan_lainnya->isEmpty())
                     <div class="text-center py-8">
                         <i class="fas fa-chart-bar text-gray-300 text-4xl mb-3"></i>
-                        <p class="text-gray-500">Tidak ada data penjualan</p>
+                        <p class="text-gray-500">Tidak ada data pemasukan</p>
                     </div>
                     @endif
                 </div>
@@ -222,53 +240,76 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Keterangan</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jenis</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kategori</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pemasukan</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pengeluaran</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
-                        <!-- Pemasukan Rows -->
-                        @foreach($penjualan_bulan_ini as $penjualan)
+                        <!-- Pemasukan Rows - Penjualan Buah -->
+                        @foreach($pemasukan_penjualan_buah as $pemasukan)
                         <tr class="hover:bg-gray-50">
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {{ $penjualan->tanggal->format('d M Y') }}
+                                {{ \Carbon\Carbon::parse($pemasukan->tanggal)->format('d M Y') }}
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-900">
-                                Penjualan ke {{ $penjualan->pembeli }}
+                                {{ $pemasukan->keterangan ?: 'Penjualan buah' }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 capitalize">
-                                    {{ $penjualan->tujuan_jual }}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    Penjualan
                                 </span>
                             </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
+                                {{ $pemasukan->sumber_pemasukan }}
+                            </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
-                                Rp {{ number_format($penjualan->total_pemasukan, 0, ',', '.') }}
+                                Rp {{ number_format($pemasukan->total_pemasukan, 0, ',', '.') }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">-</td>
+                        </tr>
+                        @endforeach
+
+                        <!-- Pemasukan Rows - Pemasukan Lainnya -->
+                        @foreach($pemasukan_lainnya as $pemasukan)
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {{ \Carbon\Carbon::parse($pemasukan->tanggal)->format('d M Y') }}
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-900">
+                                {{ $pemasukan->keterangan ?: $pemasukan->sumber_pemasukan }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    Pemasukan Lain
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
+                                {{ $pemasukan->sumber_pemasukan }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-medium">
+                                Rp {{ number_format($pemasukan->total_pemasukan, 0, ',', '.') }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">-</td>
                         </tr>
                         @endforeach
 
                         <!-- Pengeluaran Rows -->
-                        @php
-                            $pengeluaran_list = \App\Models\Pengeluaran::whereMonth('tanggal', \Carbon\Carbon::now()->month)
-                                ->whereYear('tanggal', \Carbon\Carbon::now()->year)
-                                ->orderBy('tanggal', 'desc')
-                                ->limit(10)
-                                ->get();
-                        @endphp
-                        
                         @foreach($pengeluaran_list as $pengeluaran)
                         <tr class="hover:bg-gray-50">
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {{ $pengeluaran->tanggal->format('d M Y') }}
+                                {{ \Carbon\Carbon::parse($pengeluaran->tanggal)->format('d M Y') }}
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-900">
                                 {{ $pengeluaran->keterangan ?: 'Pengeluaran ' . $pengeluaran->jenis_pengeluaran }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 capitalize">
-                                    {{ $pengeluaran->jenis_pengeluaran }}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                    Pengeluaran
                                 </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
+                                {{ $pengeluaran->jenis_pengeluaran }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">-</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-medium">
@@ -277,6 +318,27 @@
                         </tr>
                         @endforeach
                     </tbody>
+                    <tfoot class="bg-gray-50">
+                        <tr>
+                            <td colspan="4" class="px-6 py-4 text-sm font-medium text-gray-900 text-right">
+                                Total:
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">
+                                Rp {{ number_format($total_pemasukan, 0, ',', '.') }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-red-600">
+                                Rp {{ number_format($total_pengeluaran, 0, ',', '.') }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="4" class="px-6 py-4 text-sm font-medium text-gray-900 text-right">
+                                Laba Bersih:
+                            </td>
+                            <td colspan="2" class="px-6 py-4 whitespace-nowrap text-sm font-bold {{ $laba_bersih >= 0 ? 'text-blue-600' : 'text-red-600' }}">
+                                Rp {{ number_format($laba_bersih, 0, ',', '.') }}
+                            </td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
         </div>
