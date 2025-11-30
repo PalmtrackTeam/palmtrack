@@ -22,13 +22,11 @@ Route::get('login', [AuthenticatedSessionController::class, 'create'])->name('lo
 Route::post('login', [AuthenticatedSessionController::class, 'store']);
 Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
-
 // ==================== PROTECTED ROUTES ====================
 Route::middleware(['auth'])->group(function () {
 
     // Main Dashboard (redirect berdasarkan role)
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-
 
     // ==================== OWNER ROUTES ====================
     Route::middleware(['owner'])->prefix('owner')->name('owner.')->group(function () {
@@ -50,11 +48,12 @@ Route::middleware(['auth'])->group(function () {
 
         // Rekap Produktivitas
         Route::get('/rekap-produktivitas', [OwnerDashboardController::class, 'rekapProduktivitas'])->name('rekap-produktivitas');
-
-        // Laporan Masalah
+   
+        // Laporan Masalah - ROUTE YANG DIPERBAIKI
         Route::get('/laporan-masalah', [OwnerDashboardController::class, 'laporanMasalah'])->name('laporan-masalah');
-        Route::post('/laporan-masalah/{id}/solve', [OwnerDashboardController::class, 'markProblemAsSolved'])->name('laporan-masalah.solve');
-    });
+        Route::get('/laporan-masalah/{id}/detail', [OwnerDashboardController::class, 'detailLaporan'])->name('laporan-masalah.detail');
+         Route::post('/laporan-masalah/mark-solved', [OwnerDashboardController::class, 'markProblemAsSolved'])->name('laporan-masalah.mark-solved');
+});
 
     // Verifikasi untuk Owner (di luar prefix owner)
     Route::get('/verifikasi-pemasukan', [OwnerDashboardController::class, 'verifikasiPemasukan'])->name('verifikasi-pemasukan');
@@ -67,73 +66,76 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/verifikasi-laporan-masalah', [OwnerDashboardController::class, 'verifikasiLaporanMasalah'])->name('verifikasi-laporan-masalah');
     Route::post('/laporan-masalah/{id}/verify', [OwnerDashboardController::class, 'verifyLaporanMasalah'])->name('laporan-masalah.verify');
+Route::post('/owner/laporan-masalah/mark-solved', [OwnerDashboardController::class, 'markSolved'])->name('owner.laporan-masalah.mark-solved');
+    // ==================== ADMIN ROUTES ====================
+    Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
+  Route::post('/pengeluaran/gaji', [AdminDashboardController::class, 'storeGaji'])->name('pengeluaran.gaji');
+        // Dashboard
+        Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/dashboard-stats', [AdminDashboardController::class, 'getDashboardStats'])->name('dashboard-stats');
+  Route::post('/pengeluaran/gaji/store', [AdminDashboardController::class, 'storeGaji'])
+        ->name('pengeluaran.gaji.store');
+        // Verifikasi Panen
+        Route::get('/verifikasi-panen', [AdminDashboardController::class, 'verifikasiPanen'])->name('verifikasi-panen');
+        Route::post('/verifikasi-panen/{id}', [AdminDashboardController::class, 'prosesVerifikasiPanen'])->name('proses-verifikasi-panen');
 
+        // Kelola Absensi
+        Route::get('/kelola-absensi', [AdminDashboardController::class, 'kelolaAbsensi'])->name('kelola-absensi');
+        Route::post('/input-absensi', [AdminDashboardController::class, 'inputAbsensi'])->name('input-absensi');
 
+        // Laporan Masalah
+        Route::get('/laporan-masalah', [AdminDashboardController::class, 'laporanMasalah'])->name('laporan-masalah');
+        Route::post('/laporan-masalah/{id}/teruskan-owner', [AdminDashboardController::class, 'teruskanKeOwner'])->name('teruskan-owner');
+        Route::post('/laporan-masalah/{id}/tangani', [AdminDashboardController::class, 'tanganiMasalah'])->name('tangani-masalah');
 
-  // ==================== ADMIN ROUTES ====================
-Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
+        // Rekap Produktivitas
+        Route::get('/rekap-produktivitas', [AdminDashboardController::class, 'rekapProduktivitas'])->name('rekap-produktivitas');
 
-    // Dashboard
-    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
-    Route::get('/dashboard-stats', [AdminDashboardController::class, 'getDashboardStats'])->name('dashboard-stats');
+        // Pemasukan Routes
+        Route::get('/pemasukan/create', [AdminDashboardController::class, 'createPemasukan'])->name('pemasukan.create');
+        Route::get('/input-pemasukan', [AdminDashboardController::class, 'inputPemasukan'])->name('input-pemasukan');
+        Route::post('/pemasukan', [AdminDashboardController::class, 'storePemasukan'])->name('pemasukan.store');
+        Route::get('/riwayat-pemasukan', [AdminDashboardController::class, 'riwayatPemasukan'])->name('riwayat-pemasukan');
+        
+        // Route untuk operasi CRUD pemasukan
+        Route::get('/pemasukan/{id}', [AdminDashboardController::class, 'showPemasukan'])->name('pemasukan.show');
+        Route::post('/pemasukan/{id}/verifikasi', [AdminDashboardController::class, 'verifikasiPemasukan'])->name('pemasukan.verifikasi');
+        Route::delete('/pemasukan/{id}', [AdminDashboardController::class, 'destroyPemasukan'])->name('pemasukan.destroy');
+        Route::get('/pemasukan/cetak/laporan', [AdminDashboardController::class, 'cetakLaporanPemasukan'])->name('pemasukan.cetak');
 
-    // Verifikasi Panen
-    Route::get('/verifikasi-panen', [AdminDashboardController::class, 'verifikasiPanen'])->name('verifikasi-panen');
-    Route::post('/verifikasi-panen/{id}', [AdminDashboardController::class, 'prosesVerifikasiPanen'])->name('proses-verifikasi-panen');
+        // Input & Riwayat Pengeluaran
+        Route::get('/input-pengeluaran', [AdminDashboardController::class, 'inputPengeluaran'])->name('input-pengeluaran');
+        Route::post('/pengeluaran/pupuk', [AdminDashboardController::class, 'storePupuk'])->name('pengeluaran.pupuk');
+        Route::post('/pengeluaran/transportasi', [AdminDashboardController::class, 'storeTransportasi'])->name('pengeluaran.transportasi');
+        Route::post('/pengeluaran/perawatan', [AdminDashboardController::class, 'storePerawatan'])->name('pengeluaran.perawatan');
+        Route::post('/pengeluaran/lainnya', [AdminDashboardController::class, 'storeLainnya'])->name('pengeluaran.lainnya');
+        Route::get('/riwayat-pengeluaran', [AdminDashboardController::class, 'riwayatPengeluaran'])->name('riwayat-pengeluaran');
 
-    // Kelola Absensi
-    Route::get('/kelola-absensi', [AdminDashboardController::class, 'kelolaAbsensi'])->name('kelola-absensi');
-    Route::post('/input-absensi', [AdminDashboardController::class, 'inputAbsensi'])->name('input-absensi');
+        // API PENGELUARAN
+        Route::get('/api/pengeluaran/detail/{id}', [AdminDashboardController::class, 'getDetail'])->name('pengeluaran.detail');
+        Route::get('/api/pengeluaran/{jenis}', [AdminDashboardController::class, 'getPengeluaranByJenis']);
+        Route::delete('/api/pengeluaran/{id}', [AdminDashboardController::class, 'deletePengeluaran']);
 
-    // Laporan Masalah
-    Route::get('/laporan-masalah', [AdminDashboardController::class, 'laporanMasalah'])->name('laporan-masalah');
-    Route::post('/laporan-masalah/{id}/teruskan-owner', [AdminDashboardController::class, 'teruskanKeOwner'])->name('teruskan-owner');
-    Route::post('/laporan-masalah/{id}/tangani', [AdminDashboardController::class, 'tanganiMasalah'])->name('tangani-masalah');
+        // Input & Riwayat Laporan Masalah - RUTE YANG DIPERBAIKI
+        Route::get('/input-laporan-masalah', [AdminDashboardController::class, 'inputLaporanMasalah'])->name('input-laporan-masalah');
+        Route::post('/laporan-masalah', [AdminDashboardController::class, 'storeLaporanMasalah'])->name('laporan-masalah.store');
+        Route::get('/riwayat-laporan-masalah', [AdminDashboardController::class, 'riwayatLaporanMasalah'])->name('riwayat-laporan-masalah');
+        
+        // RUTE TAMBAHAN UNTUK admin.laporan-masalah.riwayat
+        Route::prefix('laporan-masalah')->name('laporan-masalah.')->group(function () {
+            Route::get('/riwayat', [AdminDashboardController::class, 'riwayatLaporanMasalah'])->name('riwayat');
+            Route::get('/input', [AdminDashboardController::class, 'inputLaporanMasalah'])->name('input');
+            Route::post('/store', [AdminDashboardController::class, 'storeLaporanMasalah'])->name('store');
+        });
 
-    // Rekap Produktivitas
-    Route::get('/rekap-produktivitas', [AdminDashboardController::class, 'rekapProduktivitas'])->name('rekap-produktivitas');
-
-    // Pemasukan Routes - YANG DIPERBAIKI
-    Route::get('/pemasukan/create', [AdminDashboardController::class, 'createPemasukan'])->name('pemasukan.create');
-    Route::get('/input-pemasukan', [AdminDashboardController::class, 'inputPemasukan'])->name('input-pemasukan');
-    Route::post('/pemasukan', [AdminDashboardController::class, 'storePemasukan'])->name('pemasukan.store');
-    Route::get('/riwayat-pemasukan', [AdminDashboardController::class, 'riwayatPemasukan'])->name('riwayat-pemasukan');
-    
-    // Route untuk operasi CRUD pemasukan - TAMBAHKAN INI
-    Route::get('/pemasukan/{id}', [AdminDashboardController::class, 'showPemasukan'])->name('pemasukan.show');
-    Route::post('/pemasukan/{id}/verifikasi', [AdminDashboardController::class, 'verifikasiPemasukan'])->name('pemasukan.verifikasi');
-    Route::delete('/pemasukan/{id}', [AdminDashboardController::class, 'destroyPemasukan'])->name('pemasukan.destroy');
-    Route::get('/pemasukan/cetak/laporan', [AdminDashboardController::class, 'cetakLaporanPemasukan'])->name('pemasukan.cetak'); // INI ROUTE YANG DIBUTUHKAN
-
-    // Input & Riwayat Pengeluaran
-    Route::get('/input-pengeluaran', [AdminDashboardController::class, 'inputPengeluaran'])->name('input-pengeluaran');
-    Route::post('/pengeluaran/pupuk', [AdminDashboardController::class, 'storePupuk'])->name('pengeluaran.pupuk');
-    Route::post('/pengeluaran/transportasi', [AdminDashboardController::class, 'storeTransportasi'])->name('pengeluaran.transportasi');
-    Route::post('/pengeluaran/perawatan', [AdminDashboardController::class, 'storePerawatan'])->name('pengeluaran.perawatan');
-    Route::post('/pengeluaran/lainnya', [AdminDashboardController::class, 'storeLainnya'])->name('pengeluaran.lainnya');
-    Route::get('/riwayat-pengeluaran', [AdminDashboardController::class, 'riwayatPengeluaran'])->name('riwayat-pengeluaran');
-
-    // API PENGELUARAN
-    Route::get('/api/pengeluaran/detail/{id}', [AdminDashboardController::class, 'getDetail'])
-        ->name('pengeluaran.detail');
-    Route::get('/api/pengeluaran/{jenis}', [AdminDashboardController::class, 'getPengeluaranByJenis']);
-    Route::delete('/api/pengeluaran/{id}', [AdminDashboardController::class, 'deletePengeluaran']);
-
-    // Input & Riwayat Laporan Masalah
-    Route::get('/input-laporan-masalah', [AdminDashboardController::class, 'inputLaporanMasalah'])->name('input-laporan-masalah');
-    Route::post('/laporan-masalah', [AdminDashboardController::class, 'storeLaporanMasalah'])->name('laporan-masalah.store');
-    Route::get('/riwayat-laporan-masalah', [AdminDashboardController::class, 'riwayatLaporanMasalah'])->name('riwayat-laporan-masalah');
-
-    // Edit Pengeluaran
-    Route::get('/pengeluaran/edit/{id}', [AdminDashboardController::class, 'editPengeluaran'])->name('pengeluaran.edit');
-    Route::put('/pengeluaran/update/{id}', [AdminDashboardController::class, 'updatePengeluaran'])->name('pengeluaran.update');
-
-    // HAPUS BAGIAN INI (karena sudah duplikat):
-    // Route::prefix('admin')->group(function () { ... });
-
-
+        // Edit Pengeluaran
+        Route::get('/pengeluaran/edit/{id}', [AdminDashboardController::class, 'editPengeluaran'])->name('pengeluaran.edit');
+        Route::put('/pengeluaran/update/{id}', [AdminDashboardController::class, 'updatePengeluaran'])->name('pengeluaran.update');
 
     });
+
+    // Route gaji
+    Route::post('/pengeluaran/gaji', [DashboardController::class, 'storeGaji'])->name('admin.pengeluaran.gaji');
 
     // ==================== KARYAWAN ROUTES ====================
     Route::middleware(['karyawan'])->prefix('karyawan')->name('karyawan.')->group(function () {

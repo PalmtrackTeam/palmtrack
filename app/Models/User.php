@@ -70,6 +70,17 @@ class User extends Authenticatable
         return $this->role === 'admin';
     }
 
+    // Tambahkan relasi untuk gaji
+public function gaji()
+{
+    return $this->hasMany(PengeluaranGaji::class, 'id_user', 'id_user');
+}
+
+// Untuk relasi sebagai karyawan di pengeluaran gaji
+public function karyawan()
+{
+    return $this->hasMany(PengeluaranGaji::class, 'id_user', 'id_user');
+}
     public function isKaryawan()
     {
         return $this->role === 'karyawan';
@@ -79,4 +90,15 @@ class User extends Authenticatable
     {
         return $this->status_aktif === true;
     }
+
+    public function laporanMasalah()
+{
+    return $this->hasMany(LaporanMasalah::class, 'id_user');
+}
+
+public function laporanDitangani()
+{
+    return $this->hasMany(LaporanMasalah::class, 'ditangani_oleh');
+}
+
 }

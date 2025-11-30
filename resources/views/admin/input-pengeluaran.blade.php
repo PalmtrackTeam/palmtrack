@@ -48,8 +48,8 @@
                     <button onclick="showTab('perawatan')" id="tab-perawatan" class="py-4 px-6 text-center border-transparent font-medium text-sm text-gray-500 hover:text-gray-700">
                         <i class="fas fa-tools mr-2"></i>Perawatan
                     </button>
-                    <button onclick="showTab('lainnya')" id="tab-lainnya" class="py-4 px-6 text-center border-transparent font-medium text-sm text-gray-500 hover:text-gray-700">
-                        <i class="fas fa-receipt mr-2"></i>Lainnya
+                    <button onclick="showTab('gaji')" id="tab-gaji" class="py-4 px-6 text-center border-transparent font-medium text-sm text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-money-bill-wave mr-2"></i>Gaji
                     </button>
                 </nav>
             </div>
@@ -70,9 +70,9 @@
                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                         </div>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Jumlah (kg/liter)</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Jumlah (kg)</label>
                             <input type="number" name="jumlah" step="0.01" placeholder="0.00" 
                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                         </div>
@@ -80,6 +80,11 @@
                             <label class="block text-sm font-medium text-gray-700 mb-1">Harga Satuan</label>
                             <input type="number" name="harga_satuan" step="0.01" placeholder="0" 
                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Total Harga</label>
+                            <input type="number" name="total_harga" step="0.01" placeholder="0" readonly
+                                   class="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100">
                         </div>
                     </div>
                     <div class="mb-4">
@@ -157,32 +162,54 @@
                 </form>
             </div>
 
-            <!-- Form Lainnya -->
-            <div id="form-lainnya" class="p-6 hidden">
-                <form id="formLainnya">
-                    @csrf
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Tanggal</label>
-                            <input type="date" name="tanggal" value="{{ date('Y-m-d') }}" 
-                                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Total Biaya</label>
-                            <input type="number" name="total_biaya" step="0.01" placeholder="0" 
-                                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-                        </div>
-                    </div>
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Keterangan</label>
-                        <textarea name="keterangan" rows="3" placeholder="Jelaskan untuk apa pengeluaran ini..." 
-                                  class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required></textarea>
-                    </div>
-                    <button type="submit" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors">
-                        <i class="fas fa-save mr-2"></i>Simpan Pengeluaran Lainnya
-                    </button>
-                </form>
-            </div>
+            <!-- Form Gaji (Sesuai dengan struktur tabel pengeluaran_gaji) -->
+       <!-- Form Gaji (Sesuai dengan struktur tabel pengeluaran_gaji) -->
+<!-- Form Gaji (Sesuai dengan struktur tabel pengeluaran_gaji) -->
+<!-- Form Gaji -->
+<div id="form-gaji" class="p-6 hidden">
+ <form id="formGaji" method="POST" action="{{ route('admin.pengeluaran.gaji.store') }}">
+    @csrf
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Tanggal Generate</label>
+            <input type="date" name="tanggal_generate" value="{{ date('Y-m-d') }}" 
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2" required>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Periode</label>
+            <select name="periode" class="w-full border border-gray-300 rounded-lg px-3 py-2" required>
+                <option value="">Pilih Periode</option>
+                <option value="Mingguan">Mingguan</option>
+                <option value="Bulanan">Bulanan</option>
+                <option value="Tahunan">Tahunan</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Karyawan</label>
+            <select name="id_user" class="w-full border border-gray-300 rounded-lg px-3 py-2" required>
+                <option value="">Pilih Karyawan</option>
+                @foreach($users as $user)
+                    <option value="{{ $user->id_user }}">{{ $user->nama_lengkap }} ({{ $user->email }})</option>
+                @endforeach
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Total Gaji</label>
+            <input type="number" name="total_gaji" step="0.01" placeholder="0" 
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2" required>
+        </div>
+    </div>
+
+    <button type="submit" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700">
+        Simpan Pengeluaran Gaji
+    </button>
+</form>
+
+</div>
         </div>
 
         <!-- Notification -->
@@ -221,6 +248,17 @@
             }, 5000);
         }
 
+        // Auto-calculate total harga for pupuk form
+        document.querySelector('input[name="jumlah"]').addEventListener('input', calculateTotalHarga);
+        document.querySelector('input[name="harga_satuan"]').addEventListener('input', calculateTotalHarga);
+
+        function calculateTotalHarga() {
+            const jumlah = parseFloat(document.querySelector('input[name="jumlah"]').value) || 0;
+            const hargaSatuan = parseFloat(document.querySelector('input[name="harga_satuan"]').value) || 0;
+            const totalHarga = jumlah * hargaSatuan;
+            document.querySelector('input[name="total_harga"]').value = totalHarga.toFixed(2);
+        }
+
         // Form submission handlers
         document.getElementById('formPupuk').addEventListener('submit', function(e) {
             e.preventDefault();
@@ -237,9 +275,9 @@
             submitForm(this, '{{ route("admin.pengeluaran.perawatan") }}');
         });
 
-        document.getElementById('formLainnya').addEventListener('submit', function(e) {
+        document.getElementById('formGaji').addEventListener('submit', function(e) {
             e.preventDefault();
-            submitForm(this, '{{ route("admin.pengeluaran.lainnya") }}');
+            submitForm(this, '{{ route("admin.pengeluaran.gaji.store") }}');
         });
 
         function submitForm(form, url) {
@@ -250,6 +288,7 @@
                 body: formData,
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
                 }
             })
             .then(response => response.json())
@@ -258,7 +297,14 @@
                     showNotification(data.message, 'success');
                     form.reset();
                     // Reset tanggal to today
-                    form.querySelector('input[name="tanggal"]').value = new Date().toISOString().split('T')[0];
+                    const dateField = form.querySelector('input[type="date"]');
+                    if (dateField) {
+                        dateField.value = new Date().toISOString().split('T')[0];
+                    }
+                    // Reset total harga calculation
+                    if (form.id === 'formPupuk') {
+                        document.querySelector('input[name="total_harga"]').value = '';
+                    }
                 } else {
                     showNotification(data.message, 'error');
                 }
@@ -267,6 +313,8 @@
                 showNotification('Terjadi kesalahan saat menyimpan data', 'error');
                 console.error('Error:', error);
             });
+
+            
         }
     </script>
 </body>

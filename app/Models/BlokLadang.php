@@ -14,13 +14,11 @@ class BlokLadang extends Model
 
     protected $fillable = [
         'nama_blok',
-        'kategori',
-        'luas_hektar',
+        'kategori', // dekat / jauh
         'harga_upah_per_kg'
     ];
 
     protected $casts = [
-        'luas_hektar' => 'decimal:2',
         'harga_upah_per_kg' => 'decimal:2',
     ];
 
@@ -54,7 +52,7 @@ class BlokLadang extends Model
         return "Blok {$this->nama_blok} ({$this->kategori})";
     }
 
-    // Method untuk mendapatkan total panen per periode
+    // Total panen dalam periode
     public function getTotalPanen($startDate = null, $endDate = null)
     {
         $query = $this->panenHarian();
@@ -66,7 +64,7 @@ class BlokLadang extends Model
         return $query->sum('jumlah_kg');
     }
 
-    // Method untuk mendapatkan rata-rata panen harian
+    // Rata-rata panen harian
     public function getRataRataPanenHarian($startDate = null, $endDate = null)
     {
         $query = $this->panenHarian();

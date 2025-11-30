@@ -30,7 +30,7 @@
                         <i class="fas fa-arrow-left"></i> Kembali
                     </a>
                     <i class="fas fa-tractor text-xl mr-3"></i>
-                    <span class="font-semibold text-xl">Laporan Masalah</span>
+                    <span class="font-semibold text-xl">Laporan Masalah Karyawan</span>
                 </div>
                 <div class="flex items-center space-x-4">
                     <span class="text-green-200">Admin</span>
@@ -48,8 +48,35 @@
     <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <!-- Header -->
         <div class="mb-6">
-            <h1 class="text-2xl font-bold text-gray-900">Kelola Laporan Masalah</h1>
+            <h1 class="text-2xl font-bold text-gray-900">Kelola Laporan Masalah Karyawan</h1>
             <p class="text-gray-600">Tinjau dan tangani laporan masalah dari karyawan</p>
+        </div>
+
+        <!-- Filter Section -->
+        <div class="bg-white rounded-xl card-shadow p-4 mb-6">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between space-y-3 md:space-y-0">
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm font-medium text-gray-700">Filter:</span>
+                    <select id="filterStatus" onchange="filterLaporan()" 
+                            class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="semua">Semua Status</option>
+                        <option value="dilaporkan">Menunggu</option>
+                        <option value="dalam_penanganan">Ditangani</option>
+                        <option value="selesai">Selesai</option>
+                    </select>
+                    <select id="filterKeparahan" onchange="filterLaporan()"
+                            class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="semua">Semua Tingkat</option>
+                        <option value="ringan">Ringan</option>
+                        <option value="sedang">Sedang</option>
+                        <option value="berat">Berat</option>
+                    </select>
+                </div>
+                <div class="text-sm text-gray-600">
+                    <i class="fas fa-users mr-1"></i>
+                    Menampilkan laporan dari karyawan saja
+                </div>
+            </div>
         </div>
 
         <!-- Stats -->
@@ -58,7 +85,7 @@
                 <div class="text-2xl font-bold text-blue-600">
                     {{ $laporan_masalah->count() }}
                 </div>
-                <div class="text-sm text-gray-600">Total Laporan</div>
+                <div class="text-sm text-gray-600">Total Laporan Karyawan</div>
             </div>
             <div class="bg-white rounded-xl card-shadow p-4 text-center">
                 <div class="text-2xl font-bold text-orange-600">
@@ -83,17 +110,27 @@
         <!-- Problems List -->
         <div class="bg-white rounded-xl card-shadow overflow-hidden">
             <div class="px-6 py-4 border-b border-gray-200">
-                <h3 class="text-lg font-semibold text-gray-900">Daftar Laporan Masalah</h3>
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-semibold text-gray-900">Daftar Laporan Masalah Karyawan</h3>
+                    <span class="text-sm text-gray-500">
+                        {{ $laporan_masalah->count() }} laporan
+                    </span>
+                </div>
             </div>
             <div class="p-6">
                 @if($laporan_masalah->count() > 0)
-                    <div class="space-y-4">
+                    <div class="space-y-4" id="laporanList">
                         @foreach($laporan_masalah as $laporan)
-                        <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                        <div class="laporan-item border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors" 
+                             data-status="{{ $laporan->status_masalah }}"
+                             data-keparahan="{{ $laporan->tingkat_keparahan }}">
                             <div class="flex justify-between items-start mb-3">
                                 <div>
                                     <div class="flex items-center space-x-2 mb-1">
                                         <span class="font-semibold text-gray-900">{{ $laporan->pelapor->nama_lengkap }}</span>
+                                        <span class="bg-green-100 text-green-800 status-badge">
+                                            <i class="fas fa-user-tie mr-1"></i>Karyawan
+                                        </span>
                                         <span class="status-badge 
                                             @if($laporan->status_masalah == 'dilaporkan') bg-yellow-100 text-yellow-800
                                             @elseif($laporan->status_masalah == 'dalam_penanganan') bg-blue-100 text-blue-800
@@ -105,6 +142,10 @@
                                         @if($laporan->tingkat_keparahan == 'berat')
                                         <span class="status-badge bg-red-100 text-red-800">
                                             <i class="fas fa-exclamation-triangle mr-1"></i>Berat
+                                        </span>
+                                        @elseif($laporan->tingkat_keparahan == 'sedang')
+                                        <span class="status-badge bg-orange-100 text-orange-800">
+                                            <i class="fas fa-exclamation-circle mr-1"></i>Sedang
                                         </span>
                                         @endif
                                     </div>
@@ -155,8 +196,9 @@
                     </div>
                 @else
                     <div class="text-center py-12 text-gray-500">
-                        <i class="fas fa-check-circle text-3xl mb-3 text-green-500"></i>
-                        <p>Tidak ada laporan masalah</p>
+                        <i class="fas fa-users text-3xl mb-3 text-green-500"></i>
+                        <p class="text-lg font-medium mb-2">Tidak ada laporan masalah dari karyawan</p>
+                        <p class="text-sm">Semua laporan masalah dari karyawan akan muncul di sini</p>
                     </div>
                 @endif
             </div>
@@ -167,7 +209,7 @@
     <div id="handleModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
         <div class="bg-white rounded-xl w-full max-w-2xl">
             <div class="px-6 py-4 border-b border-gray-200">
-                <h3 class="text-lg font-semibold text-gray-900">Tangani Laporan Masalah</h3>
+                <h3 class="text-lg font-semibold text-gray-900">Tangani Laporan Masalah Karyawan</h3>
             </div>
             <form id="handleForm" class="p-6">
                 @csrf
@@ -202,8 +244,37 @@
     </div>
 
     <script>
+        function filterLaporan() {
+            const statusFilter = document.getElementById('filterStatus').value;
+            const keparahanFilter = document.getElementById('filterKeparahan').value;
+            const items = document.querySelectorAll('.laporan-item');
+            
+            let visibleCount = 0;
+            
+            items.forEach(item => {
+                const status = item.getAttribute('data-status');
+                const keparahan = item.getAttribute('data-keparahan');
+                
+                const statusMatch = statusFilter === 'semua' || status === statusFilter;
+                const keparahanMatch = keparahanFilter === 'semua' || keparahan === keparahanFilter;
+                
+                if (statusMatch && keparahanMatch) {
+                    item.style.display = 'block';
+                    visibleCount++;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+            
+            // Update counter
+            const counter = document.querySelector('.text-sm.text-gray-500');
+            if (counter) {
+                counter.textContent = `${visibleCount} laporan`;
+            }
+        }
+
         function teruskanKeOwner(masalahId) {
-            if (confirm('Teruskan laporan ini ke Owner?')) {
+            if (confirm('Teruskan laporan karyawan ini ke Owner?')) {
                 fetch(`/admin/laporan-masalah/${masalahId}/teruskan-owner`, {
                     method: 'POST',
                     headers: {

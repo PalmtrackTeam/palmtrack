@@ -385,10 +385,6 @@
                             <p class="font-medium">${formatDate(item.tanggal)}</p>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-500">Karyawan</p>
-                            <p class="font-medium">${item.gaji.nama_karyawan || '-'}</p>
-                        </div>
-                        <div>
                             <p class="text-sm text-gray-500">Periode</p>
                             <p class="font-medium">${item.gaji.periode || '-'}</p>
                         </div>

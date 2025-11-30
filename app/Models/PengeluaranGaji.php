@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 class PengeluaranGaji extends Model
 {
     protected $table = 'pengeluaran_gaji';
-
     protected $primaryKey = 'id_gaji';
 
     protected $fillable = [
@@ -23,8 +22,9 @@ class PengeluaranGaji extends Model
         return $this->belongsTo(Pengeluaran::class, 'id_pengeluaran', 'id_pengeluaran');
     }
 
-    public function user()
+    // Relasi ke user karyawan
+    public function karyawan()
     {
-        return $this->belongsTo(User::class, 'id_user', 'id_user');
+        return $this->belongsTo(User::class, 'id_user', 'id_user'); // id_user di tabel user
     }
 }

@@ -446,35 +446,107 @@ public function laporanKeuangan(Request $request)
             'laporan_masalah' => collect($laporanMasalah)
         ]);
     }
+public function markSolved(Request $request)
+{
+    try {
+        $request->validate([
+            'id_masalah' => 'required|exists:laporan_masalah,id_masalah',
+            'tindakan' => 'required|string|min:10'
+        ]);
 
-    public function markProblemAsSolved(Request $request, $id)
-    {
-        try {
-            $laporan = LaporanMasalah::findOrFail($id);
-            
-            $request->validate([
-                'tindakan' => 'required|string|max:1000',
-            ]);
+        $laporan = LaporanMasalah::findOrFail($request->id_masalah);
+        
+        $laporan->update([
+            'status_masalah' => 'selesai',
+            'tindakan' => $request->tindakan,
+            'ditangani_oleh' => auth()->id(),
+            'tanggal_selesai' => now()
+        ]);
 
-            $laporan->update([
-                'status_masalah' => 'selesai',
-                'tindakan' => $request->tindakan,
-                'ditangani_oleh' => auth()->id(),
-                'tanggal_selesai' => now(),
-            ]);
+        return response()->json([
+            'success' => true,
+            'message' => 'Laporan berhasil ditandai sebagai selesai'
+        ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Laporan masalah berhasil ditandai sebagai selesai'
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Gagal memperbarui status laporan: ' . $e->getMessage()
-            ], 500);
-        }
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+        ], 500);
     }
+}
+   // Di Owner DashboardController
+public function detailLaporan($id)
+{
+    try {
+        $laporan = LaporanMasalah::with(['pelapor', 'penanda', 'penangan'])
+            ->findOrFail($id);
 
+        return response()->json([
+            'success' => true,
+            'laporan' => $laporan
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Laporan tidak ditemukan'
+        ], 404);
+    }
+}
+
+public function markProblemAsSolved(Request $request)
+{
+    try {
+        \Log::info('Mark as solved request:', $request->all());
+        
+        $request->validate([
+            'id_masalah' => 'required|exists:laporan_masalah,id_masalah',
+            'tindakan' => 'required|string|min:10'
+        ]);
+
+        DB::beginTransaction();
+
+        $laporan = LaporanMasalah::findOrFail($request->id_masalah);
+        
+        \Log::info('Found laporan:', ['id' => $laporan->id_masalah, 'status' => $laporan->status_masalah]);
+        
+        $laporan->update([
+            'tindakan' => $request->tindakan,
+            'status_masalah' => 'selesai',
+            'ditangani_oleh' => auth()->id(),
+            'tanggal_selesai' => now()
+        ]);
+
+        DB::commit();
+
+        \Log::info('Laporan updated successfully');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Laporan berhasil ditandai sebagai selesai'
+        ]);
+
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        DB::rollBack();
+        \Log::error('Validation error:', $e->errors());
+        
+        // PERBAIKAN: Ganti array_flatten dengan collect()->flatten()
+        $errorMessages = collect($e->errors())->flatten()->implode(', ');
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Validasi gagal: ' . $errorMessages
+        ], 422);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        \Log::error('Error marking problem as solved: ' . $e->getMessage());
+        \Log::error('Stack trace: ' . $e->getTraceAsString());
+        return response()->json([
+            'success' => false,
+            'message' => 'Terjadi kesalahan server: ' . $e->getMessage()
+        ], 500);
+    }
+}
     public function getDashboardStats()
     {
         try {
