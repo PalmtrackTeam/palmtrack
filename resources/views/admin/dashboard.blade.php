@@ -55,14 +55,24 @@
                 </div>
                 
                 <nav class="mt-4">
+
                     <a href="{{ route('admin.dashboard') }}" class="flex items-center px-4 py-3 text-green-700 bg-green-50 border-r-4 border-green-600">
                         <i class="fas fa-chart-line w-6 mr-3"></i>
                         Dashboard
                     </a>
-                    <a href="{{ route('admin.verifikasi-panen') }}" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors">
-                        <i class="fas fa-check-circle w-6 mr-3"></i>
-                        Verifikasi Panen
+
+                    <!-- Input Panen -->
+                    <a href="{{ route('admin.input-panen') }}" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors">
+                        <i class="fas fa-seedling w-6 mr-3"></i>
+                        Input Panen
                     </a>
+
+                    <!-- Riwayat Panen -->
+                    <a href="{{ route('admin.riwayat-panen') }}" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors">
+                        <i class="fas fa-history w-6 mr-3"></i>
+                        Riwayat Panen
+                    </a>
+
                     <a href="{{ route('admin.kelola-absensi') }}" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors">
                         <i class="fas fa-clipboard-check w-6 mr-3"></i>
                         Kelola Absensi
@@ -75,6 +85,7 @@
                         <i class="fas fa-chart-bar w-6 mr-3"></i>
                         Rekap Produktivitas
                     </a>
+
                     <!-- Fitur Baru -->
                     <a href="{{ route('admin.input-pengeluaran') }}" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors">
                         <i class="fas fa-money-bill-wave w-6 mr-3"></i>
@@ -101,6 +112,7 @@
 
                 <!-- Quick Actions -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+
                     <a href="{{ route('admin.input-pengeluaran') }}" class="bg-white rounded-xl card-shadow p-6 border-l-4 border-blue-500 hover-lift group">
                         <div class="flex items-center">
                             <div class="p-3 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
@@ -137,21 +149,24 @@
                         </div>
                     </a>
 
-                    <a href="{{ route('admin.verifikasi-panen') }}" class="bg-white rounded-xl card-shadow p-6 border-l-4 border-purple-500 hover-lift group">
+                    <!-- Input PANEN -->
+                    <a href="{{ route('admin.input-panen') }}" class="bg-white rounded-xl card-shadow p-6 border-l-4 border-yellow-500 hover-lift group">
                         <div class="flex items-center">
-                            <div class="p-3 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
-                                <i class="fas fa-check-circle text-purple-600 text-xl"></i>
+                            <div class="p-3 bg-yellow-100 rounded-lg group-hover:bg-yellow-200 transition-colors">
+                                <i class="fas fa-seedling text-yellow-600 text-xl"></i>
                             </div>
                             <div class="ml-4">
-                                <p class="text-sm font-medium text-gray-600">Verifikasi Panen</p>
-                                <p class="text-lg font-bold text-gray-900">{{ $panen_perlu_verifikasi->count() }} Menunggu</p>
+                                <p class="text-sm font-medium text-gray-600">Input Panen</p>
+                                <p class="text-lg font-bold text-gray-900">Catat Panen</p>
                             </div>
                         </div>
                     </a>
+
                 </div>
 
                 <!-- Stats Grid -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+
                     <div class="bg-white rounded-xl card-shadow p-6 border-l-4 border-blue-500 hover-lift">
                         <div class="flex items-center">
                             <div class="p-3 bg-blue-100 rounded-lg">
@@ -194,50 +209,17 @@
                                 <i class="fas fa-clock text-orange-600 text-xl"></i>
                             </div>
                             <div class="ml-4">
-                                <p class="text-sm font-medium text-gray-600">Perlu Verifikasi</p>
-                                <p class="text-2xl font-bold text-gray-900">{{ $panen_perlu_verifikasi->count() }}</p>
+                                <p class="text-sm font-medium text-gray-600">Belum Absen</p>
+                                <p class="text-2xl font-bold text-gray-900">{{ $karyawan_belum_absen->count() }}</p>
                             </div>
                         </div>
                     </div>
+
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <!-- Panen Perlu Verifikasi -->
-                    <div class="bg-white rounded-xl card-shadow overflow-hidden">
-                        <div class="px-6 py-4 border-b border-gray-200">
-                            <div class="flex justify-between items-center">
-                                <h3 class="text-lg font-semibold text-gray-900">Panen Perlu Verifikasi</h3>
-                                <a href="{{ route('admin.verifikasi-panen') }}" class="text-sm text-blue-600 hover:text-blue-800">Lihat Semua</a>
-                            </div>
-                        </div>
-                        <div class="p-6">
-                            @if($panen_perlu_verifikasi->count() > 0)
-                                <div class="space-y-4">
-                                    @foreach($panen_perlu_verifikasi->take(3) as $panen)
-                                    <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                                        <div>
-                                            <div class="font-semibold text-gray-900">{{ $panen->user->nama_lengkap }}</div>
-                                            <div class="text-sm text-gray-600">
-                                                {{ $panen->blok->nama_blok }} • {{ number_format($panen->jumlah_kg, 1) }} kg
-                                            </div>
-                                            <div class="text-xs text-gray-500">{{ $panen->tanggal->translatedFormat('d M Y') }}</div>
-                                        </div>
-                                        <a href="{{ route('admin.verifikasi-panen') }}" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors">
-                                            Verifikasi
-                                        </a>
-                                    </div>
-                                    @endforeach
-                                </div>
-                            @else
-                                <div class="text-center py-8 text-gray-500">
-                                    <i class="fas fa-check-circle text-3xl mb-3 text-green-500"></i>
-                                    <p>Tidak ada panen yang perlu diverifikasi</p>
-                                </div>
-                            @endif
-                        </div>
-                    </div>
 
-                    <!-- Karyawan Belum Absen -->
+                    <!-- CARD BELUM ABSEN -->
                     <div class="bg-white rounded-xl card-shadow overflow-hidden">
                         <div class="px-6 py-4 border-b border-gray-200">
                             <div class="flex justify-between items-center">
@@ -270,10 +252,12 @@
                             @endif
                         </div>
                     </div>
+
                 </div>
 
                 <!-- Bottom Section -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+
                     <!-- Blok Terproduktif -->
                     <div class="bg-white rounded-xl card-shadow p-6">
                         <h3 class="text-lg font-semibold text-gray-900 mb-4">Blok Terproduktif Hari Ini</h3>
@@ -335,6 +319,7 @@
                             </a>
                         </div>
                     </div>
+
                 </div>
             </div>
         </div>
@@ -347,24 +332,10 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // Update stats cards if needed
                         console.log('Stats updated:', data.data);
                     }
                 });
         }, 30000);
-
-        // Add hover effects for quick action cards
-        document.addEventListener('DOMContentLoaded', function() {
-            const quickActionCards = document.querySelectorAll('.hover-lift');
-            quickActionCards.forEach(card => {
-                card.addEventListener('mouseenter', function() {
-                    this.style.transform = 'translateY(-2px)';
-                });
-                card.addEventListener('mouseleave', function() {
-                    this.style.transform = 'translateY(0)';
-                });
-            });
-        });
     </script>
 </body>
 </html>
