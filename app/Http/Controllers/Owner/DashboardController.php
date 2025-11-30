@@ -108,90 +108,98 @@ class DashboardController extends Controller
         ]);
     }
 
-    public function laporanKeuangan(Request $request)
-    {
-        // Determine date range based on filter
-        $periode = $request->get('periode', 'bulan_ini');
-        
-        switch ($periode) {
-            case 'bulan_lalu':
-                $startDate = Carbon::now()->subMonth()->startOfMonth();
-                $endDate = Carbon::now()->subMonth()->endOfMonth();
-                break;
-            case '3_bulan':
-                $startDate = Carbon::now()->subMonths(3)->startOfMonth();
-                $endDate = Carbon::now()->endOfMonth();
-                break;
-            case 'tahun_ini':
-                $startDate = Carbon::now()->startOfYear();
-                $endDate = Carbon::now()->endOfYear();
-                break;
-            default: // bulan_ini
-                $startDate = Carbon::now()->startOfMonth();
-                $endDate = Carbon::now()->endOfMonth();
-                break;
-        }
-
-        // Override with custom dates if provided
-        if ($request->has('start_date')) {
-            $startDate = Carbon::createFromFormat('Y-m-d', $request->start_date);
-        }
-        if ($request->has('end_date')) {
-            $endDate = Carbon::createFromFormat('Y-m-d', $request->end_date);
-        }
-
-        // Data pemasukan periode
-        $pemasukanBulanIni = Pemasukan::whereBetween('tanggal', [$startDate, $endDate])
-            ->sum('total_pemasukan');
-
-        // Data pemasukan periode sebelumnya untuk comparison
-        $previousStartDate = $startDate->copy()->subMonth();
-        $previousEndDate = $endDate->copy()->subMonth();
-        
-        $pemasukanBulanLalu = Pemasukan::whereBetween('tanggal', [$previousStartDate, $previousEndDate])
-            ->sum('total_pemasukan');
-
-        // Data pengeluaran periode
-        $pengeluaranBulanIni = Pengeluaran::whereBetween('tanggal', [$startDate, $endDate])
-            ->sum('total_biaya');
-
-        $pengeluaranBulanLalu = Pengeluaran::whereBetween('tanggal', [$previousStartDate, $previousEndDate])
-            ->sum('total_biaya');
-
-        // Growth calculation
-        $growthPemasukan = $pemasukanBulanLalu > 0 
-            ? round((($pemasukanBulanIni - $pemasukanBulanLalu) / $pemasukanBulanLalu) * 100, 2)
-            : ($pemasukanBulanIni > 0 ? 100 : 0);
-
-        $growthPengeluaran = $pengeluaranBulanLalu > 0 
-            ? round((($pengeluaranBulanIni - $pengeluaranBulanLalu) / $pengeluaranBulanLalu) * 100, 2)
-            : ($pengeluaranBulanIni > 0 ? 100 : 0);
-
-        // Detail pengeluaran per kategori
-        $pengeluaranPerKategori = Pengeluaran::whereBetween('tanggal', [$startDate, $endDate])
-            ->selectRaw('jenis_pengeluaran, SUM(total_biaya) as total')
-            ->groupBy('jenis_pengeluaran')
-            ->get();
-
-        // Data penjualan periode
-        $penjualanBulanIni = Penjualan::whereBetween('tanggal', [$startDate, $endDate])
-            ->orderBy('tanggal', 'desc')
-            ->get();
-
-        return view('owner.laporan-keuangan', [
-            'pemasukan_bulan_ini' => $pemasukanBulanIni,
-            'pengeluaran_bulan_ini' => $pengeluaranBulanIni,
-            'pemasukan_bulan_lalu' => $pemasukanBulanLalu,
-            'pengeluaran_bulan_lalu' => $pengeluaranBulanLalu,
-            'growth_pemasukan' => $growthPemasukan,
-            'growth_pengeluaran' => $growthPengeluaran,
-            'pengeluaran_per_kategori' => $pengeluaranPerKategori,
-            'penjualan_bulan_ini' => $penjualanBulanIni,
-            'start_date' => $startDate->format('Y-m-d'),
-            'end_date' => $endDate->format('Y-m-d'),
-            'periode' => $periode
-        ]);
+public function laporanKeuangan(Request $request)
+{
+    // Determine date range based on filter
+    $periode = $request->get('periode', 'bulan_ini');
+    
+    switch ($periode) {
+        case 'bulan_lalu':
+            $startDate = Carbon::now()->subMonth()->startOfMonth();
+            $endDate = Carbon::now()->subMonth()->endOfMonth();
+            break;
+        case '3_bulan':
+            $startDate = Carbon::now()->subMonths(3)->startOfMonth();
+            $endDate = Carbon::now()->endOfMonth();
+            break;
+        case 'tahun_ini':
+            $startDate = Carbon::now()->startOfYear();
+            $endDate = Carbon::now()->endOfYear();
+            break;
+        default: // bulan_ini
+            $startDate = Carbon::now()->startOfMonth();
+            $endDate = Carbon::now()->endOfMonth();
+            break;
     }
+
+    // Override with custom dates if provided
+    if ($request->has('start_date')) {
+        $startDate = Carbon::createFromFormat('Y-m-d', $request->start_date);
+    }
+    if ($request->has('end_date')) {
+        $endDate = Carbon::createFromFormat('Y-m-d', $request->end_date);
+    }
+
+    // PERBAIKAN: Ambil semua data pemasukan berdasarkan periode
+    $semuaPemasukan = Pemasukan::whereBetween('tanggal', [$startDate, $endDate])
+        ->orderBy('tanggal', 'desc')
+        ->get();
+
+    // Pisahkan pemasukan berdasarkan sumber
+    $pemasukanPenjualanBuah = $semuaPemasukan->where('sumber_pemasukan', 'penjualan_buah');
+    $pemasukanLainnya = $semuaPemasukan->where('sumber_pemasukan', 'lainnya');
+
+    // Total pemasukan
+    $totalPemasukan = $semuaPemasukan->sum('total_pemasukan');
+
+    // Data pengeluaran periode
+    $pengeluaranBulanIni = Pengeluaran::whereBetween('tanggal', [$startDate, $endDate])
+        ->orderBy('tanggal', 'desc')
+        ->get();
+
+    $totalPengeluaran = $pengeluaranBulanIni->sum('total_biaya');
+
+    // Data untuk comparison (periode sebelumnya)
+    $previousStartDate = $startDate->copy()->subMonth();
+    $previousEndDate = $endDate->copy()->subMonth();
+    
+    // Total pemasukan periode sebelumnya
+    $pemasukanBulanLalu = Pemasukan::whereBetween('tanggal', [$previousStartDate, $previousEndDate])
+        ->sum('total_pemasukan');
+    
+    // Total pengeluaran periode sebelumnya
+    $pengeluaranBulanLalu = Pengeluaran::whereBetween('tanggal', [$previousStartDate, $previousEndDate])
+        ->sum('total_biaya');
+
+    // Growth calculation
+    $growthPemasukan = $pemasukanBulanLalu > 0 
+        ? round((($totalPemasukan - $pemasukanBulanLalu) / $pemasukanBulanLalu) * 100, 2)
+        : ($totalPemasukan > 0 ? 100 : 0);
+
+    $growthPengeluaran = $pengeluaranBulanLalu > 0 
+        ? round((($totalPengeluaran - $pengeluaranBulanLalu) / $pengeluaranBulanLalu) * 100, 2)
+        : ($totalPengeluaran > 0 ? 100 : 0);
+
+    // Detail pengeluaran per kategori
+    $pengeluaranPerKategori = Pengeluaran::whereBetween('tanggal', [$startDate, $endDate])
+        ->selectRaw('jenis_pengeluaran, SUM(total_biaya) as total')
+        ->groupBy('jenis_pengeluaran')
+        ->get();
+
+    return view('owner.laporan-keuangan', [
+        'total_pemasukan' => $totalPemasukan,
+        'total_pengeluaran' => $totalPengeluaran,
+        'growth_pemasukan' => $growthPemasukan,
+        'growth_pengeluaran' => $growthPengeluaran,
+        'pengeluaran_per_kategori' => $pengeluaranPerKategori,
+        'pemasukan_penjualan_buah' => $pemasukanPenjualanBuah, // Variabel yang sesuai
+        'pemasukan_lainnya' => $pemasukanLainnya,
+        'pengeluaran_list' => $pengeluaranBulanIni,
+        'start_date' => $startDate->format('Y-m-d'),
+        'end_date' => $endDate->format('Y-m-d'),
+        'periode' => $periode
+    ]);
+}
 
     public function manajemenUser()
     {
