@@ -4,6 +4,7 @@
 
 @section('content')
 <div class="max-w-6xl mx-auto mt-6 bg-white shadow-md rounded-2xl overflow-hidden border border-gray-200">
+
     <!-- Header Atas -->
     <div class="bg-gradient-to-r from-gray-600 to-indigo-600 text-white p-6 text-center">
         <h1 class="text-2xl font-semibold tracking-wide">📋 Data Absensi Karyawan</h1>
@@ -29,53 +30,108 @@
     <!-- Header Hari & Info -->
     <div id="infoTanggal" class="text-center text-gray-700 text-lg font-medium mt-4"></div>
 
-    <!-- Tabel Absensi -->
-    <form id="formAbsensi" class="p-6">
+    <!-- FORM ABSENSI -->
+    <form id="formAbsensi" method="POST" action="{{ route('absensi.store') }}" class="p-6">
+        @csrf
+
+        <!-- tanggal real -->
+        <input type="hidden" name="tanggal" id="tanggal_input">
+
         <div class="overflow-x-auto rounded-lg border border-gray-200">
             <table class="min-w-full text-sm text-gray-700">
                 <thead class="bg-gray-100 text-gray-700 uppercase text-xs">
                     <tr>
-                        <th class="px-4 py-3 text-left border">No</th>
-                        <th class="px-4 py-3 text-left border">Nama & Jabatan</th>
+                        <th class="px-4 py-3 border">No</th>
+                        <th class="px-4 py-3 border">Nama & Role</th>
                         <th class="px-4 py-3 text-center border">Hadir</th>
-                        <th class="px-4 py-3 text-center border">Tidak</th>
                         <th class="px-4 py-3 text-center border">Izin</th>
                         <th class="px-4 py-3 text-center border">Sakit</th>
+
+                        @if(auth()->user()->role !== 'karyawan')
+                        <th class="px-4 py-3 text-center border">Alpha</th>
+                        @endif
+
+                        <th class="px-4 py-3 border">Keterangan</th>
                     </tr>
                 </thead>
-                <tbody id="tabelAbsensi" class="divide-y divide-gray-200 bg-white"></tbody>
+
+                <tbody class="divide-y divide-gray-200 bg-white">
+                    @foreach($karyawan as $i => $k)
+                        @php
+                            $user = auth()->user();
+                            $disabled = ($user->role === 'karyawan' && $user->id != $k->id) ? 'disabled' : '';
+                        @endphp
+
+                        <tr>
+                            <td class="px-4 py-3 border text-center">{{ $i + 1 }}</td>
+
+                            <td class="px-4 py-3 border">
+                                <div class="font-semibold">{{ $k->nama }}</div>
+                                <div class="text-xs text-gray-500">{{ ucfirst($k->role) }}</div>
+                            </td>
+
+                            <!-- HADIR -->
+                            <td class="px-4 py-3 border text-center">
+                                <input {{ $disabled }} type="radio" name="absensi[{{ $k->id }}]" value="Hadir"
+                                       class="statusRadio accent-green-500 w-5 h-5">
+                            </td>
+
+                            <!-- IZIN -->
+                            <td class="px-4 py-3 border text-center">
+                                <input {{ $disabled }} type="radio" name="absensi[{{ $k->id }}]" value="Izin"
+                                       class="statusRadio accent-yellow-500 w-5 h-5">
+                            </td>
+
+                            <!-- SAKIT -->
+                            <td class="px-4 py-3 border text-center">
+                                <input {{ $disabled }} type="radio" name="absensi[{{ $k->id }}]" value="Sakit"
+                                       class="statusRadio accent-blue-500 w-5 h-5">
+                            </td>
+
+                            @if($user->role !== 'karyawan')
+                            <!-- ALPHA -->
+                            <td class="px-4 py-3 border text-center">
+                                <input {{ $disabled }} type="radio" name="absensi[{{ $k->id }}]" value="Alpha"
+                                       class="statusRadio accent-red-500 w-5 h-5">
+                            </td>
+                            @endif
+
+                            <!-- KETERANGAN -->
+                            <td class="px-4 py-3 border">
+                                <input {{ $disabled }} type="text" name="keterangan[{{ $k->id }}]"
+                                       class="ketInput hidden w-full px-2 py-1 border rounded"
+                                       placeholder="Isi keterangan...">
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
             </table>
         </div>
 
         <div class="text-center mt-6">
-            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold shadow-sm transition">
+            <button type="submit"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold shadow-sm transition">
                 💾 Simpan Absensi
             </button>
         </div>
     </form>
 </div>
 
-<script>
-const karyawanDummy = [
-    { nama: 'Ahmad Rozan', jabatan: 'Pemanen' },
-    { nama: 'Budi Santoso', jabatan: 'Pemanen' },
-    { nama: 'Candra Wijaya', jabatan: 'Pimpinan' },
-    { nama: 'Dedi Saputra', jabatan: 'Sopir' },
-    { nama: 'Mawaddah', jabatan: 'Karyawan' },
-    { nama: 'Robert Ong', jabatan: 'Karyawan' },
-    { nama: 'Andreas Cristian', jabatan: 'Karyawan' },
-];
+<!-- TOAST -->
+<div id="toast"
+     class="fixed top-5 right-5 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg opacity-0 transition duration-300">
+</div>
 
+<!-- SCRIPT KALENDER (tidak diubah) -->
+<script>
 const tahunSelect = document.getElementById('tahun');
 const bulanSelect = document.getElementById('bulan');
 const tanggalSelect = document.getElementById('tanggal');
 const infoTanggal = document.getElementById('infoTanggal');
-const tbody = document.getElementById('tabelAbsensi');
 
 const bulanNama = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 const hariNama = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
 
-// Isi dropdown tahun
 const currentYear = new Date().getFullYear();
 for (let i = currentYear - 2; i <= currentYear + 1; i++) {
     const opt = document.createElement('option');
@@ -85,7 +141,6 @@ for (let i = currentYear - 2; i <= currentYear + 1; i++) {
     tahunSelect.appendChild(opt);
 }
 
-// Isi dropdown bulan
 bulanNama.forEach((b, i) => {
     const opt = document.createElement('option');
     opt.value = i;
@@ -94,7 +149,6 @@ bulanNama.forEach((b, i) => {
     bulanSelect.appendChild(opt);
 });
 
-// Fungsi untuk isi dropdown tanggal sesuai bulan & tahun
 function isiTanggal() {
     tanggalSelect.innerHTML = '';
     const year = parseInt(tahunSelect.value);
@@ -113,60 +167,80 @@ function isiTanggal() {
 }
 isiTanggal();
 
-// Tampilkan info tanggal di atas tabel
 function tampilkanInfoTanggal() {
     const y = tahunSelect.value;
     const m = bulanSelect.value;
     const d = tanggalSelect.value;
+
     const date = new Date(y, m, d);
     const hari = hariNama[date.getDay()];
     const tanggalStr = `${hari}, ${d} ${bulanNama[m]} ${y}`;
+
     infoTanggal.textContent = tanggalStr;
+    document.getElementById('tanggal_input').value = `${y}-${parseInt(m)+1}-${d}`;
 }
 
-// Render tabel absensi
-function renderTable() {
-    tbody.innerHTML = '';
-    karyawanDummy.forEach((k, index) => {
-        const tr = document.createElement('tr');
-        tr.classList.add('hover:bg-gray-50', 'transition', 'text-gray-800');
-
-        tr.innerHTML = `
-            <td class="px-4 py-3 border text-center font-medium">${index + 1}</td>
-            <td class="px-4 py-3 border">
-                <div class="font-semibold">${k.nama}</div>
-                <div class="text-xs text-gray-500">${k.jabatan}</div>
-            </td>
-            <td class="px-4 py-3 border text-center"><input type="radio" name="absensi_${index}" value="Hadir" class="accent-green-500 w-5 h-5"></td>
-            <td class="px-4 py-3 border text-center"><input type="radio" name="absensi_${index}" value="Tidak" class="accent-red-500 w-5 h-5"></td>
-            <td class="px-4 py-3 border text-center"><input type="radio" name="absensi_${index}" value="Izin" class="accent-yellow-500 w-5 h-5"></td>
-            <td class="px-4 py-3 border text-center"><input type="radio" name="absensi_${index}" value="Sakit" class="accent-blue-500 w-5 h-5"></td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
-renderTable();
-
-// Event Listener
 tahunSelect.addEventListener('change', isiTanggal);
 bulanSelect.addEventListener('change', isiTanggal);
 tanggalSelect.addEventListener('change', tampilkanInfoTanggal);
 
+
+// =====================
+// VALIDASI FORM
+// =====================
 document.getElementById('formAbsensi').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const hasil = [];
-    karyawanDummy.forEach((k, index) => {
-        const pilihan = document.querySelector(`input[name="absensi_${index}"]:checked`);
-        hasil.push({
-            nama: k.nama,
-            jabatan: k.jabatan,
-            keterangan: pilihan ? pilihan.value : 'Belum diisi',
-            tanggal: `${tanggalSelect.value}-${parseInt(bulanSelect.value)+1}-${tahunSelect.value}`
-        });
-    });
-    console.table(hasil);
-    alert('✅ Absensi berhasil disimpan! (Cek console untuk data)');
+    let valid = true;
+    let message = "";
+
+    @foreach($karyawan as $k)
+        let status = document.querySelector('input[name="absensi[{{ $k->id }}]"]:checked');
+        let ket = document.querySelector('input[name="keterangan[{{ $k->id }}]"]');
+
+        if (!status) {
+            valid = false;
+            message = "Belum Mengisi Absen.";
+        } else if ((status.value === "Izin" || status.value === "Sakit") && ket.value.trim() === "") {
+            valid = false;
+            message = "Keterangan wajib diisi untuk Izin dan Sakit.";
+        }
+    @endforeach
+
+    if (!valid) {
+        e.preventDefault();
+        showToast(message, true);
+    }
 });
+
+// auto show/hide keterangan
+document.querySelectorAll('.statusRadio').forEach(r => {
+    r.addEventListener('change', function() {
+        const row = this.closest('tr');
+        const ket = row.querySelector('.ketInput');
+
+        if (['Izin','Sakit'].includes(this.value)) {
+            ket.classList.remove('hidden');
+        } else {
+            ket.classList.add('hidden');
+            ket.value = "";
+        }
+    });
+});
+
+function showToast(msg, error = false) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.remove('bg-green-600');
+    toast.classList.remove('bg-red-600');
+    toast.classList.add(error ? 'bg-red-600' : 'bg-green-600');
+
+    toast.style.opacity = "1";
+    setTimeout(() => toast.style.opacity = "0", 2500);
+}
+
+@if(session('status'))
+    showToast("{{ session('status') }}");
+@endif
+
 </script>
+
 @endsection
