@@ -220,83 +220,94 @@ public function laporanKeuangan(Request $request)
             'statistics' => $statistics
         ]);
     }
-
-    // METHOD REKAP PRODUKTIVITAS YANG DIPERBAIKI - GUNAKAN VIEW ADMIN
-   public function rekapProduktivitas(Request $request)
+  public function rekapProduktivitas(Request $request)
 {
     $startDate = $request->get('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
-    $endDate = $request->get('end_date', Carbon::now()->endOfMonth()->format('Y-m-d'));
+    $endDate   = $request->get('end_date', Carbon::now()->endOfMonth()->format('Y-m-d'));
 
-    try {
-        // Query utama untuk produktivitas karyawan
-        $produktivitasKaryawan = DB::table('panen_harian')
-            ->join('users', 'panen_harian.id_user', '=', 'users.id_user')
-            ->whereBetween('panen_harian.tanggal', [$startDate, $endDate])
-            ->where('panen_harian.status_panen', 'diverifikasi')
-            ->where('users.status_aktif', 1)
-            ->where('users.role', 'karyawan')
-            ->selectRaw('
-                users.id_user,
-                users.nama_lengkap,
-                users.jabatan,
-                COUNT(DISTINCT panen_harian.tanggal) as hari_kerja,
-                COALESCE(SUM(panen_harian.jumlah_kg), 0) as total_kg,
-                COALESCE(SUM(panen_harian.total_upah), 0) as total_upah,
-                CASE 
-                    WHEN COUNT(DISTINCT panen_harian.tanggal) > 0 
-                    THEN COALESCE(SUM(panen_harian.jumlah_kg), 0) / COUNT(DISTINCT panen_harian.tanggal)
-                    ELSE 0 
-                END as rata_kg_per_hari
-            ')
-            ->groupBy('users.id_user', 'users.nama_lengkap', 'users.jabatan')
-            ->orderBy('total_kg', 'desc')
-            ->get();
+    // Siapkan variabel default agar tidak muncul error "unassigned variable"
+    $produktivitasKaryawan = collect([]);
+    $produktivitasPerBlok = collect([]);
+    $topAbsensi = collect([]);
 
-    } catch (\Exception $e) {
-        // Fallback query yang lebih sederhana
-        \Log::error('Error in rekapProduktivitas: ' . $e->getMessage());
-        
-        $produktivitasKaryawan = DB::table('panen_harian')
-            ->join('users', 'panen_harian.id_user', '=', 'users.id_user')
-            ->whereBetween('panen_harian.tanggal', [$startDate, $endDate])
-            ->where('panen_harian.status_panen', 'diverifikasi')
-            ->where('users.status_aktif', 1)
-            ->selectRaw('
-                users.id_user,
-                users.nama_lengkap,
-                users.jabatan,
-                COUNT(*) as hari_kerja,
-                SUM(panen_harian.jumlah_kg) as total_kg,
-                SUM(panen_harian.total_upah) as total_upah,
-                AVG(panen_harian.jumlah_kg) as rata_kg_per_hari
-            ')
-            ->groupBy('users.id_user', 'users.nama_lengkap', 'users.jabatan')
-            ->orderBy('total_kg', 'desc')
-            ->get();
-    }
-
-    // Data produktivitas per blok
-    $produktivitasPerBlok = DB::table('panen_harian')
-        ->join('blok_ladang', 'panen_harian.id_blok', '=', 'blok_ladang.id_blok')
+    // ======================== PRODUKTIVITAS KARYAWAN ========================
+    $produktivitasKaryawan = DB::table('panen_harian')
+        ->join('users', 'panen_harian.id_user', '=', 'users.id_user')
         ->whereBetween('panen_harian.tanggal', [$startDate, $endDate])
         ->where('panen_harian.status_panen', 'diverifikasi')
+        ->where('users.status_aktif', 1)
+        ->where('users.role', 'karyawan')
         ->selectRaw('
-            blok_ladang.nama_blok, 
-            SUM(panen_harian.jumlah_kg) as total_berat, 
-            COUNT(*) as total_panen
+            users.id_user,
+            users.nama_lengkap,
+            users.role,
+            COALESCE(COUNT(DISTINCT panen_harian.tanggal), 0) as hari_kerja,
+            COALESCE(SUM(panen_harian.jumlah_kg), 0) as total_kg,
+            COALESCE(SUM(panen_harian.total_upah), 0) as total_upah,
+            CASE 
+                WHEN COUNT(DISTINCT panen_harian.tanggal) > 0 
+                THEN COALESCE(SUM(panen_harian.jumlah_kg), 0) / COUNT(DISTINCT panen_harian.tanggal)
+                ELSE 0
+            END as rata_kg_per_hari
         ')
-        ->groupBy('blok_ladang.nama_blok')
+        ->groupBy('users.id_user', 'users.nama_lengkap', 'users.role')
+        ->orderBy('total_kg', 'desc')
+        ->get();
+
+    // ======================== PRODUKTIVITAS PER BLOK ========================
+    $produktivitasPerBlok = DB::table('panen_harian')
+        ->rightJoin('blok_ladang', 'panen_harian.id_blok', '=', 'blok_ladang.id_blok')
+        ->where(function ($q) use ($startDate, $endDate) {
+            $q->whereBetween('panen_harian.tanggal', [$startDate, $endDate])
+              ->orWhereNull('panen_harian.tanggal');
+        })
+        ->selectRaw('
+            blok_ladang.id_blok,
+            blok_ladang.nama_blok,
+            COALESCE(SUM(panen_harian.jumlah_kg), 0) as total_berat,
+            COALESCE(COUNT(panen_harian.id_panen), 0) as total_panen,
+            CASE
+                WHEN COUNT(panen_harian.id_panen) > 0
+                THEN AVG(panen_harian.jumlah_kg)
+                ELSE 0
+            END as rata_per_panen,
+            COALESCE(SUM(panen_harian.total_upah), 0) as total_upah,
+            COALESCE(GROUP_CONCAT(DISTINCT panen_harian.jenis_buah), "Tidak ada") as jenis_buah
+        ')
+        ->groupBy('blok_ladang.id_blok', 'blok_ladang.nama_blok')
         ->orderBy('total_berat', 'desc')
         ->get();
 
-    // PERBAIKAN: GUNAKAN VIEW OWNER, BUKAN ADMIN
-    return view('owner.rekap-produktivitas', [
+    // ======================== TOP ABSENSI ========================
+    $topAbsensi = DB::table('absensi')
+        ->join('users', 'absensi.id_user', '=', 'users.id_user')
+        ->whereBetween('absensi.tanggal', [$startDate, $endDate])
+        ->where('users.role', 'karyawan')
+        ->where('users.status_aktif', 1)
+        ->selectRaw('
+            users.id_user,
+            users.nama_lengkap,
+            users.role,
+            SUM(CASE WHEN absensi.status_kehadiran = "Alpha" THEN 1 ELSE 0 END) as total_alpha,
+            SUM(CASE WHEN absensi.status_kehadiran = "Hadir" THEN 1 ELSE 0 END) as total_hadir,
+            COUNT(absensi.id_absensi) as total_absensi
+        ')
+        ->groupBy('users.id_user', 'users.nama_lengkap', 'users.role')
+        ->orderBy('total_alpha', 'desc')
+        ->orderBy('total_hadir', 'asc')
+        ->take(3)
+        ->get();
+
+    // ======================== RETURN VIEW ========================
+    return view('admin.rekap-produktivitas', [
         'produktivitas_karyawan' => $produktivitasKaryawan,
         'produktivitas_per_blok' => $produktivitasPerBlok,
+        'top_absensi' => $topAbsensi,
         'start_date' => $startDate,
         'end_date' => $endDate
     ]);
 }
+
     public function updateUserStatus(Request $request, $id)
     {
         try {

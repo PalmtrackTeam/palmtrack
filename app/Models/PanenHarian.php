@@ -31,6 +31,29 @@ class PanenHarian extends Model
         'harga_upah_per_kg' => 'decimal:2',
         'total_upah' => 'decimal:2',
     ];
+// Di dalam class PanenHarian
+
+// Mutator untuk set harga_upah_per_kg otomatis
+public function setHargaUpahPerKgAttribute($value)
+{
+    // Jika jenis buah adalah gugur, pakai value yang dikirim dari form
+    if ($this->jenis_buah === 'buah_gugur') {
+        $this->attributes['harga_upah_per_kg'] = $value ?? 0;
+    } else {
+        // Tentukan harga berdasarkan jarak blok
+        $this->attributes['harga_upah_per_kg'] = $this->blokLadang->jarak === 'jauh' ? 220 : 200;
+    }
+}
+
+// Mutator untuk set total_upah otomatis
+public function setTotalUpahAttribute($value)
+{
+    if ($this->jenis_buah === 'buah_gugur') {
+        $this->attributes['total_upah'] = $value ?? 0; // input manual
+    } else {
+        $this->attributes['total_upah'] = $this->jumlah_kg * $this->harga_upah_per_kg;
+    }
+}
 
     // Relationship dengan user (karyawan yang memanen)
     public function user()

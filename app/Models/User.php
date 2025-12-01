@@ -14,20 +14,20 @@ class User extends Authenticatable
     protected $primaryKey = 'id_user';
 
     protected $fillable = [
-        'username',
-        'email', // Pastikan email ada di fillable
-        'password',
-        'nama_lengkap',
-        'jabatan',
-        'role',
-        'status_aktif',
-        'no_telepon',
-        'alamat',
-        'tanggal_bergabung',
-        'status_tinggal',
-        'bisa_input_panen',
-        'bisa_input_absen'
-    ];
+    'username',
+    'nama_lengkap',
+    'email',
+    'password',
+    'role',
+    'status_aktif',
+    'no_telepon',
+    'alamat',
+    'id_blok',  // <= WAJIB ADA
+    'tanggal_bergabung',
+    'bisa_input_panen',
+    'bisa_input_absen',
+];
+
 
     protected $hidden = [
         'password',

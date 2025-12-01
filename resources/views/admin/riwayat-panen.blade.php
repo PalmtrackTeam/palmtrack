@@ -4,12 +4,40 @@
 <div class="container mx-auto p-4">
     <h1 class="text-2xl font-bold mb-6">Riwayat Panen Harian</h1>
 
-    @if(session('success'))
-        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-            ✅ {{ session('success') }}
+    {{-- Form Filter --}}
+    <form method="GET" action="{{ route('admin.riwayat-panen') }}" class="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Blok Ladang</label>
+            <select name="id_blok" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2">
+                <option value="">Semua Blok</option>
+                @foreach($blokLadang as $blok)
+                    <option value="{{ $blok->id_blok }}" {{ request('id_blok') == $blok->id_blok ? 'selected' : '' }}>
+                        {{ $blok->nama_blok }}
+                    </option>
+                @endforeach
+            </select>
         </div>
-    @endif
 
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Tanggal Mulai</label>
+            <input type="date" name="tanggal_mulai" value="{{ request('tanggal_mulai') }}" 
+                   class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2">
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Tanggal Selesai</label>
+            <input type="date" name="tanggal_selesai" value="{{ request('tanggal_selesai') }}" 
+                   class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2">
+        </div>
+
+        <div class="flex items-end">
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">
+                🔍 Filter
+            </button>
+        </div>
+    </form>
+
+    {{-- Tabel Riwayat --}}
     @if($riwayatPanen->count() > 0)
         <div class="bg-white shadow-md rounded-lg overflow-hidden">
             <table class="min-w-full divide-y divide-gray-200">
@@ -42,19 +70,9 @@
                             Rp {{ number_format($panen->total_upah, 0, ',', '.') }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            @if($panen->status_panen == 'draft')
-                                <span class="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">
-                                    {{ $panen->status_panen_text }}
-                                </span>
-                            @elseif($panen->status_panen == 'diverifikasi')
-                                <span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
-                                    {{ $panen->status_panen_text }}
-                                </span>
-                            @else
-                                <span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
-                                    {{ $panen->status_panen_text }}
-                                </span>
-                            @endif
+                            <span class="px-2 py-1 text-xs rounded-full {{ $panen->status_panen_class }}">
+                                {{ $panen->status_panen_text }}
+                            </span>
                         </td>
                     </tr>
                     @endforeach
@@ -64,18 +82,18 @@
     @else
         <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
             <p>Belum ada data panen. 
-                <a href="{{ route('karyawan.input-panen') }}" class="font-medium underline text-blue-600">
+                <a href="{{ route('admin.input-panen') }}" class="font-medium underline text-blue-600">
                     Input panen pertama Anda
                 </a>
             </p>
         </div>
     @endif
 
-    <div class="mt-6">
-        <a href="{{ route('karyawan.input-panen') }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition duration-200">
+    <div class="mt-6 flex gap-2">
+        <a href="{{ route('admin.input-panen') }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition duration-200">
             ➕ Input Panen Baru
         </a>
-        <a href="{{ route('karyawan.dashboard') }}" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md transition duration-200 ml-2">
+        <a href="{{ route('admin.dashboard') }}" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md transition duration-200">
             📊 Kembali ke Dashboard
         </a>
     </div>

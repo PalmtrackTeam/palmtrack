@@ -125,30 +125,61 @@
                 </div>
             </div>
 
-            <!-- Top Performers -->
-            <div class="bg-white rounded-xl card-shadow p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Top Performers</h3>
-                <div class="space-y-3">
-                    @foreach($produktivitas_karyawan->take(3) as $karyawan)
-                    <div class="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                        <div class="flex items-center">
-                            <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-semibold">
-                                {{ strtoupper(substr($karyawan->nama_lengkap, 0, 1)) }}
-                            </div>
-                            <div class="ml-3">
-                                <div class="font-semibold text-gray-900">{{ $karyawan->nama_lengkap }}</div>
-                                <div class="text-sm text-gray-600 capitalize">{{ $karyawan->jabatan }}</div>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <div class="font-semibold text-green-600">{{ number_format($karyawan->total_kg, 0, ',', '.') }} kg</div>
-                            <div class="text-sm text-gray-500">{{ number_format($karyawan->rata_kg_per_hari, 1) }} kg/hari</div>
-                        </div>
-                    </div>
-                    @endforeach
+            <!-- Top Performers (Tampilan Rapi & Profesional) -->
+<div class="bg-white rounded-xl card-shadow p-6">
+    <h3 class="text-lg font-semibold text-gray-900 mb-4">Top Performers</h3>
+
+    @php
+        $rankColor = [
+            1 => 'bg-yellow-500 text-white',
+            2 => 'bg-gray-400 text-white',
+            3 => 'bg-orange-500 text-white'
+        ];
+    @endphp
+
+    <div class="space-y-3">
+        @foreach($produktivitas_karyawan->take(3) as $index => $karyawan)
+        <div class="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+
+            <!-- Ranking Badge -->
+            <div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm 
+                {{ $rankColor[$index+1] ?? 'bg-green-600 text-white' }}">
+                {{ $index + 1 }}
+            </div>
+
+            <!-- Info Karyawan -->
+            <div class="flex items-center ml-3">
+                <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center 
+                    text-green-600 font-semibold text-sm uppercase">
+                    {{ substr($karyawan->nama_lengkap, 0, 1) }}
+                </div>
+                <div class="ml-3">
+                    <div class="font-semibold text-gray-900 text-sm">{{ $karyawan->nama_lengkap }}</div>
+                    <div class="text-xs text-gray-500 capitalize">{{ $karyawan->role }}</div>
+                </div>
+            </div>
+
+            <!-- Statistik -->
+            <div class="text-right">
+                <div class="font-semibold text-green-600 text-sm">
+                    {{ number_format($karyawan->total_kg, 0, ',', '.') }} kg
+                </div>
+                <div class="text-xs text-gray-500">
+                    {{ number_format($karyawan->rata_kg_per_hari, 1) }} kg/hari
                 </div>
             </div>
         </div>
+        @endforeach
+
+        @if($produktivitas_karyawan->take(3)->count() == 0)
+            <div class="text-center py-4 text-gray-500">
+                <i class="fas fa-chart-line text-2xl mb-2"></i>
+                <p>Belum ada data produktivitas</p>
+            </div>
+        @endif
+    </div>
+</div>
+
 
         <!-- Detailed Productivity Table -->
         <div class="bg-white rounded-xl card-shadow overflow-hidden">
@@ -186,7 +217,7 @@
                                     <div class="font-semibold text-gray-900">{{ $karyawan->nama_lengkap }}</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
-                                    {{ $karyawan->jabatan }}
+                                    {{ $karyawan->role }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                     {{ $karyawan->hari_kerja }}

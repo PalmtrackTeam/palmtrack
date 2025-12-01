@@ -15,25 +15,38 @@ use Carbon\Carbon; // PERBAIKI: Hapus "Karyawan\\"
 class DashboardController extends Controller
 {
     public function index()
-    {
-        $user = auth()->user();
-        $today = today();
+{
+    $user = auth()->user();
+    $today = today();
 
-        $data = [
-            'panen_hari_ini' => PanenHarian::where('id_user', $user->id_user)
-                                      ->whereDate('tanggal', $today)
-                                      ->sum('jumlah_kg'),
-            'status_absen_hari_ini' => Absensi::where('id_user', $user->id_user)
-                                         ->whereDate('tanggal', $today)
-                                         ->first(),
-            'total_panen_bulan_ini' => PanenHarian::where('id_user', $user->id_user)
-                                             ->whereMonth('tanggal', $today->month)
-                                             ->whereYear('tanggal', $today->year)
-                                             ->sum('jumlah_kg'),
-        ];
+    $status_absen_hari_ini = Absensi::where('id_user', $user->id_user)
+                                ->whereDate('tanggal', $today)
+                                ->first();
 
-        return view('karyawan.dashboard', $data);
-    }
+    $panen_hari_ini = PanenHarian::where('id_user', $user->id_user)
+                            ->whereDate('tanggal', $today)
+                            ->sum('jumlah_kg');
+
+    $total_panen_bulan_ini = PanenHarian::where('id_user', $user->id_user)
+                                ->whereMonth('tanggal', $today->month)
+                                ->whereYear('tanggal', $today->year)
+                                ->sum('jumlah_kg');
+
+    // Tambahkan laporan terbaru
+    $laporan_terbaru = LaporanMasalah::where('id_user', $user->id_user)
+                        ->orderBy('tanggal', 'desc')
+                        ->orderBy('id_masalah', 'desc')
+                        ->take(5)
+                        ->get();
+
+    return view('karyawan.dashboard', compact(
+        'panen_hari_ini',
+        'status_absen_hari_ini',
+        'total_panen_bulan_ini',
+        'laporan_terbaru'
+    ));
+}
+
 
     // Method untuk input pemasukan
     public function inputPemasukan()
@@ -93,10 +106,25 @@ class DashboardController extends Controller
     }
 
     // Method untuk laporan masalah
-    public function inputLaporanMasalah()
-    {
-        return view('karyawan.input-laporan-masalah');
-    }
+  public function inputLaporanMasalah()
+{
+$laporan_terbaru = LaporanMasalah::where('id_user', auth()->id())
+->orderBy('tanggal', 'desc')
+->orderBy('id_masalah', 'desc')
+->take(5)
+->get();
+
+$status_absen_hari_ini = Absensi::where('id_user', auth()->id())
+                            ->whereDate('tanggal', today())
+                            ->first();
+
+return view('karyawan.input-laporan-masalah', [
+    'laporan_terbaru' => $laporan_terbaru,
+    'status_absen_hari_ini' => $status_absen_hari_ini
+]);
+
+
+}
 
     public function storeLaporanMasalah(Request $request)
     {
@@ -115,7 +143,7 @@ class DashboardController extends Controller
                 'deskripsi' => $request->deskripsi,
                 'tingkat_keparahan' => $request->tingkat_keparahan,
                 'status_masalah' => 'dilaporkan',
-                'status_verifikasi' => false
+               
             ]);
 
             return response()->json([

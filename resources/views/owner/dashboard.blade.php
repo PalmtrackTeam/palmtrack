@@ -456,7 +456,7 @@ setInterval(function() {
     fetch('{{ route("owner.dashboard.stats") }}')
         .then(response => response.json())
         .then(data => {
-            if (data.success) {
+            if (data.success) {da
                 // Update stats cards
                 document.querySelector('[data-stat="karyawan"]').textContent = data.data.total_karyawan;
                 document.querySelector('[data-stat="admin"]').textContent = data.data.total_admin;
