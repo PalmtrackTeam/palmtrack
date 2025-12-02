@@ -163,10 +163,7 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Jam Masuk</label>
                                 <input type="time" name="jam_masuk" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                             </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Jam Pulang</label>
-                                <input type="time" name="jam_pulang" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                            </div>
+                         
                         </div>
 
                         <div class="mb-4">

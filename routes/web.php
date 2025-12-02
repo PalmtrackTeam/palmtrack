@@ -90,6 +90,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/input-panen', [InputPanenController::class, 'create'])->name('input-panen');
         Route::post('/store-panen', [InputPanenController::class, 'store'])->name('store-panen');
         Route::get('/riwayat-panen', [InputPanenController::class, 'riwayat'])->name('riwayat-panen');
+Route::delete('/pemasukan/{id}', [AdminDashboardController::class, 'destroy'])->name('admin.pemasukan.destroy');
 
         // Verifikasi Panen
         Route::get('/verifikasi-panen', [AdminDashboardController::class, 'verifikasiPanen'])->name('verifikasi-panen');

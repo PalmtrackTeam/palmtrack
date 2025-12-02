@@ -182,7 +182,7 @@ class DashboardController extends Controller
                 'tanggal' => 'required|date',
                 'status_kehadiran' => 'required|in:Hadir,Izin,Sakit,Alpha,Libur_Agama',
                 'jam_masuk' => 'nullable|date_format:H:i',
-                'jam_pulang' => 'nullable|date_format:H:i',
+                
                 'keterangan' => 'nullable|string|max:500'
             ]);
 
@@ -195,7 +195,7 @@ class DashboardController extends Controller
                 $existingAbsensi->update([
                     'status_kehadiran' => $request->status_kehadiran,
                     'jam_masuk' => $request->jam_masuk,
-                    'jam_pulang' => $request->jam_pulang,
+               
                     'keterangan' => $request->keterangan
                 ]);
             } else {
@@ -204,7 +204,6 @@ class DashboardController extends Controller
                     'tanggal' => $request->tanggal,
                     'status_kehadiran' => $request->status_kehadiran,
                     'jam_masuk' => $request->jam_masuk,
-                    'jam_pulang' => $request->jam_pulang,
                     'keterangan' => $request->keterangan
                 ]);
             }
@@ -297,6 +296,23 @@ class DashboardController extends Controller
             ], 500);
         }
     }
+public function destroy($id)
+{
+    try {
+        $pemasukan = Pemasukan::findOrFail($id);
+        $pemasukan->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Data pemasukan berhasil dihapus.'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+        ]);
+    }
+}
 
     public function showPemasukan($id)
     {

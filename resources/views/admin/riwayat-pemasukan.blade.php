@@ -116,9 +116,7 @@
                                         <td>{{ $item->keterangan ?: '-' }}</td>
                                         <td>{{ $item->pencatat->nama_lengkap ?? 'N/A' }}</td>
                                         <td>
-                                            <button class="btn btn-sm btn-outline-primary" onclick="showDetail({{ $item->id_pemasukan }})">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
+                                           
                                             <button class="btn btn-sm btn-outline-danger" onclick="hapusPemasukan({{ $item->id_pemasukan }})">
                                                 <i class="fas fa-trash"></i>
                                             </button>

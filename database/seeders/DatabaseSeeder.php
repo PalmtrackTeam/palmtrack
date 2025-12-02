@@ -61,7 +61,7 @@ class DatabaseSeeder extends Seeder
             [
                 'nama_blok' => 'Blok A',
                 'kategori' => 'dekat',
-                'luas_hektar' => 50.00,
+                
                 'harga_upah_per_kg' => 200.00,
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -69,7 +69,7 @@ class DatabaseSeeder extends Seeder
             [
                 'nama_blok' => 'Blok B',
                 'kategori' => 'dekat',
-                'luas_hektar' => 50.00,
+                
                 'harga_upah_per_kg' => 200.00,
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -77,7 +77,7 @@ class DatabaseSeeder extends Seeder
             [
                 'nama_blok' => 'Blok C',
                 'kategori' => 'jauh',
-                'luas_hektar' => 50.00,
+                
                 'harga_upah_per_kg' => 220.00,
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -85,7 +85,7 @@ class DatabaseSeeder extends Seeder
             [
                 'nama_blok' => 'Blok D',
                 'kategori' => 'jauh',
-                'luas_hektar' => 50.00,
+                
                 'harga_upah_per_kg' => 220.00,
                 'created_at' => now(),
                 'updated_at' => now(),
