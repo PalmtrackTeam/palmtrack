@@ -49,7 +49,6 @@ class DashboardController extends Controller
 public function dashboardAdmin()
 {
     $data = [
-        'panen_perlu_verifikasi' => PanenHarian::where('status_panen', 'draft')->count(),
         'laporan_masalah_baru' => LaporanMasalah::where('status_masalah', 'dilaporkan')->count(),
         'karyawan_hadir_hari_ini' => Absensi::whereDate('tanggal', today())
                                             ->where('status_kehadiran', 'Hadir')

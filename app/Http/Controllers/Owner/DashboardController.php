@@ -18,95 +18,54 @@ use Illuminate\Support\Facades\Hash;
 
 class DashboardController extends Controller
 {
-    public function index()
-    {
-        // Data statistik untuk owner dashboard
-        $totalKaryawan = User::where('role', 'karyawan')
-                            ->where('status_aktif', 1)
-                            ->count();
-                            
-        $totalAdmin = User::where('role', 'admin')
-                         ->where('status_aktif', 1)
-                         ->count();
+     public function index()
+{
+    // Ambil data dari view (satu baris)
+    $data = DB::table('v_dashboard_owner')->first();
 
-        // Hitung panen bulan ini
-        $panenBulanIni = PanenHarian::whereMonth('tanggal', Carbon::now()->month)
-            ->whereYear('tanggal', Carbon::now()->year)
-            ->where('status_panen', 'diverifikasi')
-            ->sum('jumlah_kg');
+    // Jika chart 6 bulan terakhir sudah disiapkan dalam view sebagai JSON
+    $bulanLabels = json_decode($data->bulan_labels ?? '[]', true);
+    $pemasukanData = json_decode($data->pemasukan_data ?? '[]', true);
+    $pengeluaranData = json_decode($data->pengeluaran_data ?? '[]', true);
 
-        // Hitung pemasukan bulan ini
-        $pemasukanBulanIni = Pemasukan::whereMonth('tanggal', Carbon::now()->month)
-            ->whereYear('tanggal', Carbon::now()->year)
-            ->sum('total_pemasukan');
+    // Data aktivitas terbaru tetap bisa dibuat manual
+    $aktivitasTerbaru = [
+        [
+            'icon' => 'fas fa-seedling',
+            'color' => 'text-green-500',
+            'title' => 'Panen Terbaru',
+            'description' => 'Total ' . number_format($data->panen_bulan_ini ?? 0, 0, ',', '.') . ' kg bulan ini',
+            'time' => 'Hari ini'
+        ],
+        [
+            'icon' => 'fas fa-users',
+            'color' => 'text-blue-500',
+            'title' => 'Tim Aktif',
+            'description' => ($data->total_karyawan ?? 0) . ' karyawan dan ' . ($data->total_admin ?? 0) . ' mandor',
+            'time' => 'Hari ini'
+        ],
+        [
+            'icon' => 'fas fa-chart-line',
+            'color' => 'text-purple-500',
+            'title' => 'Performansi Baik',
+            'description' => 'Sistem berjalan optimal',
+            'time' => 'Hari ini'
+        ]
+    ];
 
-        // Hitung pengeluaran bulan ini
-        $pengeluaranBulanIni = Pengeluaran::whereMonth('tanggal', Carbon::now()->month)
-            ->whereYear('tanggal', Carbon::now()->year)
-            ->sum('total_biaya');
-
-        // Data laporan masalah yang perlu perhatian
-        $laporanMasalahBaru = LaporanMasalah::where('diteruskan_ke_owner', 1)
-            ->where('status_masalah', '!=', 'selesai')
-            ->count();
-
-        // Data untuk chart - 6 bulan terakhir dengan default values
-        $bulanLabels = [];
-        $pemasukanData = [];
-        $pengeluaranData = [];
-        
-        for ($i = 5; $i >= 0; $i--) {
-            $bulan = Carbon::now()->subMonths($i);
-            $bulanLabels[] = $bulan->format('M Y');
-            
-            // Pastikan tidak null dengan default 0
-            $pemasukanData[] = Pemasukan::whereMonth('tanggal', $bulan->month)
-                ->whereYear('tanggal', $bulan->year)
-                ->sum('total_pemasukan') ?? 0;
-                
-            $pengeluaranData[] = Pengeluaran::whereMonth('tanggal', $bulan->month)
-                ->whereYear('tanggal', $bulan->year)
-                ->sum('total_biaya') ?? 0;
-        }
-
-        // Data aktivitas terbaru
-        $aktivitasTerbaru = [
-            [
-                'icon' => 'fas fa-seedling',
-                'color' => 'text-green-500',
-                'title' => 'Panen Terbaru',
-                'description' => 'Total ' . number_format($panenBulanIni, 0, ',', '.') . ' kg bulan ini',
-                'time' => 'Hari ini'
-            ],
-            [
-                'icon' => 'fas fa-users',
-                'color' => 'text-blue-500',
-                'title' => 'Tim Aktif',
-                'description' => $totalKaryawan . ' karyawan dan ' . $totalAdmin . ' mandor',
-                'time' => 'Hari ini'
-            ],
-            [
-                'icon' => 'fas fa-chart-line',
-                'color' => 'text-purple-500',
-                'title' => 'Performansi Baik',
-                'description' => 'Sistem berjalan optimal',
-                'time' => 'Hari ini'
-            ]
-        ];
-
-        return view('owner.dashboard', [
-            'total_karyawan' => $totalKaryawan,
-            'total_admin' => $totalAdmin,
-            'panen_bulan_ini' => $panenBulanIni,
-            'pemasukan_bulan_ini' => $pemasukanBulanIni,
-            'pengeluaran_bulan_ini' => $pengeluaranBulanIni,
-            'laporan_masalah_baru' => $laporanMasalahBaru,
-            'bulan_labels' => $bulanLabels,
-            'pemasukan_data' => $pemasukanData,
-            'pengeluaran_data' => $pengeluaranData,
-            'aktivitas_terbaru' => $aktivitasTerbaru
-        ]);
-    }
+    return view('owner.dashboard', [
+        'total_karyawan' => $data->total_karyawan ?? 0,
+        'total_admin' => $data->total_admin ?? 0,
+        'panen_bulan_ini' => $data->panen_bulan_ini ?? 0,
+        'pemasukan_bulan_ini' => $data->pemasukan_bulan_ini ?? 0,
+        'pengeluaran_bulan_ini' => $data->pengeluaran_bulan_ini ?? 0,
+        'laporan_masalah_baru' => $data->laporan_masalah_baru ?? 0,
+        'bulan_labels' => $bulanLabels,
+        'pemasukan_data' => $pemasukanData,
+        'pengeluaran_data' => $pengeluaranData,
+        'aktivitas_terbaru' => $aktivitasTerbaru
+    ]);
+}
 
 public function laporanKeuangan(Request $request)
 {
@@ -220,93 +179,159 @@ public function laporanKeuangan(Request $request)
             'statistics' => $statistics
         ]);
     }
-  public function rekapProduktivitas(Request $request)
-{
-    $startDate = $request->get('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
-    $endDate   = $request->get('end_date', Carbon::now()->endOfMonth()->format('Y-m-d'));
+public function rekapProduktivitas(Request $request)
+    {
+        $start_date = $request->get('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
+        $end_date = $request->get('end_date', Carbon::now()->format('Y-m-d'));
 
-    // Siapkan variabel default agar tidak muncul error "unassigned variable"
-    $produktivitasKaryawan = collect([]);
-    $produktivitasPerBlok = collect([]);
-    $topAbsensi = collect([]);
+        // 1. PRODUKTIVITAS PER BLOK LADANG - TANPA FILTER STATUS
+        $produktivitas_per_blok = DB::table('panen_harian as ph')
+            ->join('blok_ladang as bl', 'ph.id_blok', '=', 'bl.id_blok')
+            ->select([
+                'bl.id_blok',
+                'bl.nama_blok',
+                DB::raw('COUNT(DISTINCT ph.tanggal) as total_panen'),
+                DB::raw('COALESCE(SUM(ph.jumlah_kg), 0) as total_berat'),
+                DB::raw('CASE 
+                    WHEN COUNT(DISTINCT ph.tanggal) > 0 
+                    THEN COALESCE(SUM(ph.jumlah_kg), 0) / COUNT(DISTINCT ph.tanggal)
+                    ELSE 0 
+                END as rata_per_panen'),
+                DB::raw('COALESCE(SUM(ph.total_upah), 0) as total_upah'),
+                DB::raw('CASE 
+                    WHEN COALESCE(SUM(ph.jumlah_kg), 0) > 0 
+                    THEN COALESCE(SUM(ph.total_upah), 0) / COALESCE(SUM(ph.jumlah_kg), 1)
+                    ELSE 0 
+                END as rata_upah_per_kg'),
+                // Tambahan: jenis buah yang dominan
+                DB::raw('(
+                    SELECT jenis_buah 
+                    FROM panen_harian ph2 
+                    WHERE ph2.id_blok = bl.id_blok 
+                        AND ph2.tanggal BETWEEN ? AND ?
+                    GROUP BY jenis_buah 
+                    ORDER BY SUM(jumlah_kg) DESC 
+                    LIMIT 1
+                ) as jenis_buah_dominan')
+            ])
+            ->addBinding($start_date, 'select')
+            ->addBinding($end_date, 'select')
+            ->whereBetween('ph.tanggal', [$start_date, $end_date])
+            ->groupBy('bl.id_blok', 'bl.nama_blok')
+            ->orderBy('total_berat', 'desc')
+            ->get();
 
-    // ======================== PRODUKTIVITAS KARYAWAN ========================
-    $produktivitasKaryawan = DB::table('panen_harian')
-        ->join('users', 'panen_harian.id_user', '=', 'users.id_user')
-        ->whereBetween('panen_harian.tanggal', [$startDate, $endDate])
-        ->where('panen_harian.status_panen', 'diverifikasi')
-        ->where('users.status_aktif', 1)
-        ->where('users.role', 'karyawan')
-        ->selectRaw('
-            users.id_user,
-            users.nama_lengkap,
-            users.role,
-            COALESCE(COUNT(DISTINCT panen_harian.tanggal), 0) as hari_kerja,
-            COALESCE(SUM(panen_harian.jumlah_kg), 0) as total_kg,
-            COALESCE(SUM(panen_harian.total_upah), 0) as total_upah,
-            CASE 
-                WHEN COUNT(DISTINCT panen_harian.tanggal) > 0 
-                THEN COALESCE(SUM(panen_harian.jumlah_kg), 0) / COUNT(DISTINCT panen_harian.tanggal)
-                ELSE 0
-            END as rata_kg_per_hari
-        ')
-        ->groupBy('users.id_user', 'users.nama_lengkap', 'users.role')
-        ->orderBy('total_kg', 'desc')
-        ->get();
+        // 2. PRODUKTIVITAS KARYAWAN - TANPA FILTER STATUS
+        $produktivitas_karyawan = DB::table('panen_harian as ph')
+            ->join('users as u', 'ph.id_user', '=', 'u.id_user')
+            ->select([
+                'u.id_user',
+                'u.nama_lengkap',
+                'u.role',
+                DB::raw('COUNT(DISTINCT ph.tanggal) as hari_kerja'),
+                DB::raw('COALESCE(SUM(ph.jumlah_kg), 0) as total_kg'),
+                DB::raw('COALESCE(SUM(ph.total_upah), 0) as total_upah'),
+                DB::raw('CASE 
+                    WHEN COUNT(DISTINCT ph.tanggal) > 0 
+                    THEN COALESCE(SUM(ph.jumlah_kg), 0) / COUNT(DISTINCT ph.tanggal)
+                    ELSE 0 
+                END as rata_perhari'),
+                DB::raw('CASE 
+                    WHEN COUNT(DISTINCT ph.tanggal) > 0 
+                    THEN COALESCE(SUM(ph.total_upah), 0) / COUNT(DISTINCT ph.tanggal)
+                    ELSE 0 
+                END as rata_upah_per_hari'),
+                // Tambahan: persentase buah segar vs gugur
+                DB::raw('ROUND(
+                    SUM(CASE WHEN ph.jenis_buah = "buah_segar" THEN ph.jumlah_kg ELSE 0 END) * 100.0 / 
+                    NULLIF(SUM(ph.jumlah_kg), 0), 
+                    1
+                ) as persentase_buah_segar')
+            ])
+            ->where('u.role', 'karyawan')
+            ->where('u.status_aktif', 1)
+            ->whereBetween('ph.tanggal', [$start_date, $end_date])
+            ->groupBy('u.id_user', 'u.nama_lengkap', 'u.role')
+            ->orderBy('total_kg', 'desc')
+            ->get();
 
-    // ======================== PRODUKTIVITAS PER BLOK ========================
-    $produktivitasPerBlok = DB::table('panen_harian')
-        ->rightJoin('blok_ladang', 'panen_harian.id_blok', '=', 'blok_ladang.id_blok')
-        ->where(function ($q) use ($startDate, $endDate) {
-            $q->whereBetween('panen_harian.tanggal', [$startDate, $endDate])
-              ->orWhereNull('panen_harian.tanggal');
-        })
-        ->selectRaw('
-            blok_ladang.id_blok,
-            blok_ladang.nama_blok,
-            COALESCE(SUM(panen_harian.jumlah_kg), 0) as total_berat,
-            COALESCE(COUNT(panen_harian.id_panen), 0) as total_panen,
-            CASE
-                WHEN COUNT(panen_harian.id_panen) > 0
-                THEN AVG(panen_harian.jumlah_kg)
-                ELSE 0
-            END as rata_per_panen,
-            COALESCE(SUM(panen_harian.total_upah), 0) as total_upah,
-            COALESCE(GROUP_CONCAT(DISTINCT panen_harian.jenis_buah), "Tidak ada") as jenis_buah
-        ')
-        ->groupBy('blok_ladang.id_blok', 'blok_ladang.nama_blok')
-        ->orderBy('total_berat', 'desc')
-        ->get();
+        // 3. TOP PERFORMERS - Berdasarkan total panen tanpa filter status
+        $top_performers = DB::table('users as u')
+            ->leftJoin('panen_harian as ph', function($join) use ($start_date, $end_date) {
+                $join->on('u.id_user', '=', 'ph.id_user')
+                     ->whereBetween('ph.tanggal', [$start_date, $end_date]);
+            })
+            ->leftJoin('absensi as a', function($join) use ($start_date, $end_date) {
+                $join->on('u.id_user', '=', 'a.id_user')
+                     ->whereBetween('a.tanggal', [$start_date, $end_date]);
+            })
+            ->select([
+                'u.id_user',
+                'u.nama_lengkap',
+                'u.role',
+                DB::raw('COUNT(DISTINCT ph.id_panen) as total_panen_dilakukan'),
+                DB::raw('COUNT(DISTINCT a.id_absensi) as total_hari_absensi'),
+                DB::raw('SUM(CASE WHEN a.status_kehadiran = "Hadir" THEN 1 ELSE 0 END) as total_hadir'),
+                DB::raw('SUM(CASE WHEN a.status_kehadiran = "Alpha" THEN 1 ELSE 0 END) as total_alpha'),
+                DB::raw('COALESCE(SUM(ph.jumlah_kg), 0) as total_panen_kg'),
+                DB::raw('COALESCE(SUM(ph.total_upah), 0) as total_upah_didapat'),
+                DB::raw('COUNT(DISTINCT ph.tanggal) as hari_panen'),
+                // Hitung efisiensi (kg per hari panen)
+                DB::raw('CASE 
+                    WHEN COUNT(DISTINCT ph.tanggal) > 0 
+                    THEN COALESCE(SUM(ph.jumlah_kg), 0) / COUNT(DISTINCT ph.tanggal)
+                    ELSE 0 
+                END as efisiensi_kg_per_hari')
+            ])
+            ->where('u.role', 'karyawan')
+            ->where('u.status_aktif', 1)
+            ->groupBy('u.id_user', 'u.nama_lengkap', 'u.role')
+            ->orderBy('total_panen_kg', 'desc')
+            ->orderBy('efisiensi_kg_per_hari', 'desc')
+            ->limit(5)
+            ->get();
 
-    // ======================== TOP ABSENSI ========================
-    $topAbsensi = DB::table('absensi')
-        ->join('users', 'absensi.id_user', '=', 'users.id_user')
-        ->whereBetween('absensi.tanggal', [$startDate, $endDate])
-        ->where('users.role', 'karyawan')
-        ->where('users.status_aktif', 1)
-        ->selectRaw('
-            users.id_user,
-            users.nama_lengkap,
-            users.role,
-            SUM(CASE WHEN absensi.status_kehadiran = "Alpha" THEN 1 ELSE 0 END) as total_alpha,
-            SUM(CASE WHEN absensi.status_kehadiran = "Hadir" THEN 1 ELSE 0 END) as total_hadir,
-            COUNT(absensi.id_absensi) as total_absensi
-        ')
-        ->groupBy('users.id_user', 'users.nama_lengkap', 'users.role')
-        ->orderBy('total_alpha', 'desc')
-        ->orderBy('total_hadir', 'asc')
-        ->take(3)
-        ->get();
+        // 4. STATISTIK KESELURUHAN - Semua data tanpa filter status
+        $total_berat_kg = $produktivitas_per_blok->sum('total_berat');
+        $total_upah_keseluruhan = $produktivitas_per_blok->sum('total_upah');
+        $rata_per_panen_keseluruhan = $produktivitas_per_blok->avg('rata_per_panen') ?? 0;
+        $jumlah_karyawan_aktif = $produktivitas_karyawan->count();
+        
+        // Hitung total buah segar vs gugur
+        $jenis_buah_stats = DB::table('panen_harian')
+            ->select([
+                DB::raw('SUM(CASE WHEN jenis_buah = "buah_segar" THEN jumlah_kg ELSE 0 END) as total_buah_segar'),
+                DB::raw('SUM(CASE WHEN jenis_buah = "buah_gugur" THEN jumlah_kg ELSE 0 END) as total_buah_gugur'),
+                DB::raw('COUNT(DISTINCT id_user) as jumlah_karyawan_total')
+            ])
+            ->whereBetween('tanggal', [$start_date, $end_date])
+            ->first();
 
-    // ======================== RETURN VIEW ========================
-    return view('admin.rekap-produktivitas', [
-        'produktivitas_karyawan' => $produktivitasKaryawan,
-        'produktivitas_per_blok' => $produktivitasPerBlok,
-        'top_absensi' => $topAbsensi,
-        'start_date' => $startDate,
-        'end_date' => $endDate
-    ]);
-}
+        // 5. DATA CHART
+        $chart_data = [
+            'labels' => $produktivitas_per_blok->pluck('nama_blok')->toArray(),
+            'berat' => $produktivitas_per_blok->pluck('total_berat')->toArray(),
+            'upah' => $produktivitas_per_blok->pluck('total_upah')->toArray(),
+            'jenis_buah' => [
+                'segar' => $jenis_buah_stats->total_buah_segar ?? 0,
+                'gugur' => $jenis_buah_stats->total_buah_gugur ?? 0
+            ]
+        ];
+
+        return view('owner.rekap-produktivitas', [
+            'produktivitas_per_blok' => $produktivitas_per_blok,
+            'produktivitas_karyawan' => $produktivitas_karyawan,
+            'top_performers' => $top_performers,
+            'chart_data' => $chart_data,
+            'start_date' => $start_date,
+            'end_date' => $end_date,
+            'total_berat_kg' => $total_berat_kg,
+            'total_upah_keseluruhan' => $total_upah_keseluruhan,
+            'rata_per_panen_keseluruhan' => $rata_per_panen_keseluruhan,
+            'jumlah_karyawan_aktif' => $jumlah_karyawan_aktif,
+            'jenis_buah_stats' => $jenis_buah_stats
+        ]);
+    }
 
     public function updateUserStatus(Request $request, $id)
     {

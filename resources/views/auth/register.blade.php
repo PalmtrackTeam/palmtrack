@@ -79,19 +79,30 @@
                        dark:text-white px-3 py-2">
             </div>
 
-            <!-- PILIH BLOK -->
+            <!-- PILIH BLOK LADANG -->
             <div class="mb-4">
-    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Lokasi *</label>
-    <select name="kategori" required
-            class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white px-3 py-2">
-        <option value="">Pilih Lokasi</option>
-        @foreach ($kategori as $k)
-            <option value="{{ $k->kategori }}">{{ ucfirst($k->kategori) }}</option>
-        @endforeach
-    </select>
-</div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Blok Ladang *</label>
+                <select name="id_blok" required
+                        class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white px-3 py-2">
+                    <option value="">Pilih Blok Ladang</option>
+                    @foreach ($bloks as $blok)
+                        <option value="{{ $blok->id_blok }}" 
+                                data-kategori="{{ $blok->kategori }}"
+                                {{ old('id_blok') == $blok->id_blok ? 'selected' : '' }}>
+                            {{ $blok->nama_blok }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
 
-
+            <!-- Informasi Kategori (read-only) -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Kategori Blok</label>
+                <div class="mt-1 p-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800">
+                    <span id="kategori-info" class="text-gray-700 dark:text-gray-300">-</span>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">Kategori ditentukan otomatis berdasarkan blok yang dipilih</p>
+            </div>
 
             <!-- No Telepon -->
             <div class="mb-4">
@@ -122,6 +133,38 @@
 
     </form>
 </div>
+
+<script>
+    // Menampilkan kategori blok yang dipilih
+    document.querySelector('select[name="id_blok"]').addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const kategori = selectedOption.getAttribute('data-kategori');
+        const kategoriInfo = document.getElementById('kategori-info');
+        
+        if (kategori) {
+            kategoriInfo.textContent = kategori.charAt(0).toUpperCase() + kategori.slice(1);
+            // Tambahkan warna berdasarkan kategori
+            if (kategori === 'dekat') {
+                kategoriInfo.className = 'text-green-600 dark:text-green-400 font-medium';
+            } else if (kategori === 'jauh') {
+                kategoriInfo.className = 'text-orange-600 dark:text-orange-400 font-medium';
+            }
+        } else {
+            kategoriInfo.textContent = '-';
+            kategoriInfo.className = 'text-gray-700 dark:text-gray-300';
+        }
+    });
+
+    // Inisialisasi saat halaman dimuat
+    document.addEventListener('DOMContentLoaded', function() {
+        const select = document.querySelector('select[name="id_blok"]');
+        // Trigger change jika ada value yang sudah dipilih sebelumnya
+        if (select.value) {
+            const event = new Event('change');
+            select.dispatchEvent(event);
+        }
+    });
+</script>
 
 </body>
 </html>

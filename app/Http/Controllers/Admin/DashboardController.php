@@ -21,81 +21,72 @@ use Illuminate\Support\Facades\Hash;
 
 class DashboardController extends Controller
 {
-    public function index()
-    {
-        $today = Carbon::today();
-        
-        // Data dashboard mandor
-        $totalKaryawanAktif = User::where('role', 'karyawan')
-            ->where('status_aktif', 1)
-            ->count();
+   public function index()
+{
+    $today = Carbon::today();
+    
+    // 1. Dashboard stats dari view
+    $dashboardStats = DB::table('v_dashboard_admin')
+        ->where('tanggal', $today)
+        ->first();
 
-        // Produktivitas hari ini
-        $produktivitasHariIni = PanenHarian::where('tanggal', $today)
-            ->where('status_panen', 'diverifikasi')
-            ->selectRaw('
-                COUNT(DISTINCT id_user) as total_karyawan_panen,
-                COALESCE(SUM(jumlah_kg), 0) as total_kg,
-                COALESCE(AVG(jumlah_kg), 0) as rata_kg
-            ')
-            ->first();
+    // 2. Data absensi hari ini (COLLECTION)
+    $absensiHariIni = DB::table('absensi')
+        ->select('absensi.*', 
+            DB::raw('fn_cek_telat(jam_masuk) as status_telat')
+        )
+        ->whereDate('tanggal', $today)
+        ->get();
 
-        // Blok terproduktif hari ini
-        $blokTerproduktif = PanenHarian::where('tanggal', $today)
-            ->where('status_panen', 'diverifikasi')
-            ->join('blok_ladang', 'panen_harian.id_blok', '=', 'blok_ladang.id_blok')
-            ->selectRaw('blok_ladang.nama_blok, SUM(panen_harian.jumlah_kg) as total_kg')
-            ->groupBy('blok_ladang.nama_blok')
-            ->orderBy('total_kg', 'desc')
-            ->first();
+    // 3. Hitung ringkasan absensi
+    $totalHadir = $absensiHariIni->where('status_kehadiran', 'Hadir')->count();
+    $totalIzin = $absensiHariIni->where('status_kehadiran', 'Izin')->count();
+    $totalSakit = $absensiHariIni->where('status_kehadiran', 'Sakit')->count();
+    $totalAlpha = $absensiHariIni->where('status_kehadiran', 'Alpha')->count();
+    
+    // 4. Karyawan yang belum absen
+    $karyawanBelumAbsen = DB::table('users')
+        ->where('role', 'karyawan')
+        ->where('status_aktif', 1)
+        ->whereNotIn('id_user', function($query) use ($today) {
+            $query->select('id_user')
+                  ->from('absensi')
+                  ->whereDate('tanggal', $today);
+        })
+        ->get();
 
-        // Data absensi hari ini
-        $absensiHariIni = Absensi::where('tanggal', $today)
-            ->selectRaw('
-                COUNT(*) as total_absensi,
-                SUM(CASE WHEN status_kehadiran = "Hadir" THEN 1 ELSE 0 END) as total_hadir,
-                SUM(CASE WHEN status_kehadiran = "Izin" THEN 1 ELSE 0 END) as total_izin,
-                SUM(CASE WHEN status_kehadiran = "Sakit" THEN 1 ELSE 0 END) as total_sakit,
-                SUM(CASE WHEN status_kehadiran = "Alpha" THEN 1 ELSE 0 END) as total_alpha
-            ')
-            ->first();
+    // 5. Produktivitas hari ini
+    $produktivitasHariIni = DB::table('panen_harian')
+        ->select(DB::raw('SUM(jumlah_kg) as total_kg'))
+        ->whereDate('tanggal', $today)
+        ->where('status_panen', 'diverifikasi')
+        ->first();
 
-        // Karyawan yang belum absen hari ini
-        $karyawanBelumAbsen = User::where('role', 'karyawan')
-            ->where('status_aktif', 1)
-            ->whereNotExists(function ($query) use ($today) {
-                $query->select(DB::raw(1))
-                    ->from('absensi')
-                    ->whereRaw('absensi.id_user = users.id_user')
-                    ->where('absensi.tanggal', $today);
-            })
-            ->get(['id_user', 'nama_lengkap']);
+    // 6. Blok terproduktif
+    $blokTerproduktif = DB::table('panen_harian')
+        ->join('blok_ladang', 'panen_harian.id_blok', '=', 'blok_ladang.id_blok')
+        ->select('blok_ladang.nama_blok', DB::raw('SUM(jumlah_kg) as total_kg'))
+        ->whereDate('panen_harian.tanggal', $today)
+        ->where('panen_harian.status_panen', 'diverifikasi')
+        ->groupBy('panen_harian.id_blok', 'blok_ladang.nama_blok')
+        ->orderByDesc('total_kg')
+        ->first();
 
-        // Panen perlu verifikasi
-        $panenPerluVerifikasi = PanenHarian::with(['user', 'blok'])
-            ->where('status_panen', 'draft')
-            ->orderBy('tanggal', 'desc')
-            ->limit(5)
-            ->get();
-
-        // Laporan masalah baru
-        $laporanMasalahBaru = LaporanMasalah::with(['pelapor'])
-            ->where('status_masalah', 'dilaporkan')
-            ->orderBy('tanggal', 'desc')
-            ->limit(5)
-            ->get();
-
-        return view('admin.dashboard', [
-            'total_karyawan_aktif' => $totalKaryawanAktif,
-            'produktivitas_hari_ini' => $produktivitasHariIni,
-            'blok_terproduktif' => $blokTerproduktif,
-            'absensi_hari_ini' => $absensiHariIni,
-            'karyawan_belum_absen' => $karyawanBelumAbsen,
-            'panen_perlu_verifikasi' => $panenPerluVerifikasi,
-            'laporan_masalah_baru' => $laporanMasalahBaru,
-        ]);
-    }
-
+    return view('admin.dashboard', [
+        'dashboard_stats' => $dashboardStats,
+        'absensi_hari_ini' => $absensiHariIni, // COLLECTION, bukan object
+        'karyawan_belum_absen' => $karyawanBelumAbsen,
+        'produktivitas_hari_ini' => $produktivitasHariIni, // Object dengan total_kg
+        'blok_terproduktif' => $blokTerproduktif,
+        // Tambahkan ringkasan absensi sebagai object terpisah
+        'ringkasan_absensi' => (object)[
+            'total_hadir' => $totalHadir,
+            'total_izin' => $totalIzin,
+            'total_sakit' => $totalSakit,
+            'total_alpha' => $totalAlpha,
+        ]
+    ]);
+}
     public function verifikasiPanen()
     {
         $panenDraft = PanenHarian::with(['user', 'blok'])
@@ -150,76 +141,310 @@ class DashboardController extends Controller
         }
     }
 
-    public function kelolaAbsensi(Request $request)
-    {
-        $tanggal = $request->get('tanggal', Carbon::today()->format('Y-m-d'));
+/**
+ * Get data absensi untuk edit
+ */
+public function editAbsensi($id)
+{
+    try {
+        \Log::info('Mengambil data absensi ID: ' . $id);
         
-        $absensi = Absensi::with(['user'])
-            ->where('tanggal', $tanggal)
+        $absensi = DB::table('absensi')
             ->join('users', 'absensi.id_user', '=', 'users.id_user')
-            ->select('absensi.*')
-            ->orderBy('absensi.status_kehadiran')
-            ->orderBy('users.nama_lengkap')
-            ->get();
-
-        $karyawanAktif = User::where('role', 'karyawan')
-            ->where('status_aktif', 1)
-            ->orderBy('nama_lengkap')
-            ->get();
-
-        return view('admin.kelola-absensi', [
-            'absensi' => $absensi,
-            'karyawan_aktif' => $karyawanAktif,
-            'selected_tanggal' => $tanggal
+            ->select('absensi.*', 'users.nama_lengkap')
+            ->where('absensi.id_absensi', $id)
+            ->first();
+        
+        \Log::info('Data absensi ditemukan: ' . ($absensi ? 'Ya' : 'Tidak'));
+        
+        if (!$absensi) {
+            \Log::warning('Absensi tidak ditemukan untuk ID: ' . $id);
+            return response()->json([
+                'success' => false,
+                'message' => 'Data absensi tidak ditemukan'
+            ], 404);
+        }
+        
+        // Debug log data
+        \Log::info('Data absensi:', [
+            'id_absensi' => $absensi->id_absensi,
+            'nama_lengkap' => $absensi->nama_lengkap,
+            'status_kehadiran' => $absensi->status_kehadiran,
+            'jam_masuk' => $absensi->jam_masuk,
+            'keterangan' => $absensi->keterangan
         ]);
+        
+        // Format jam_masuk untuk input type="time"
+        $jam_masuk_formatted = '';
+        if ($absensi->jam_masuk) {
+            if (strlen($absensi->jam_masuk) > 5) {
+                $jam_masuk_formatted = substr($absensi->jam_masuk, 0, 5);
+            } else {
+                $jam_masuk_formatted = $absensi->jam_masuk;
+            }
+        }
+        
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id_absensi' => $absensi->id_absensi,
+                'nama_lengkap' => $absensi->nama_lengkap,
+                'status_kehadiran' => $absensi->status_kehadiran,
+                'jam_masuk' => $jam_masuk_formatted,
+                'keterangan' => $absensi->keterangan
+            ]
+        ]);
+        
+    } catch (\Exception $e) {
+        \Log::error('Error edit absensi: ' . $e->getMessage());
+        \Log::error('Stack trace: ' . $e->getTraceAsString());
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Gagal mengambil data: ' . $e->getMessage(),
+            'debug' => 'ID: ' . $id
+        ], 500);
     }
+}
 
-    public function inputAbsensi(Request $request)
+    /**
+     * Update data absensi
+     */
+    public function updateAbsensi(Request $request, $id)
     {
         try {
             $request->validate([
-                'id_user' => 'required|exists:users,id_user',
-                'tanggal' => 'required|date',
                 'status_kehadiran' => 'required|in:Hadir,Izin,Sakit,Alpha,Libur_Agama',
                 'jam_masuk' => 'nullable|date_format:H:i',
-                
                 'keterangan' => 'nullable|string|max:500'
             ]);
-
-            // Cek apakah sudah ada absensi untuk user di tanggal tersebut
-            $existingAbsensi = Absensi::where('id_user', $request->id_user)
-                ->where('tanggal', $request->tanggal)
-                ->first();
-
-            if ($existingAbsensi) {
-                $existingAbsensi->update([
-                    'status_kehadiran' => $request->status_kehadiran,
-                    'jam_masuk' => $request->jam_masuk,
-               
-                    'keterangan' => $request->keterangan
-                ]);
-            } else {
-                Absensi::create([
-                    'id_user' => $request->id_user,
-                    'tanggal' => $request->tanggal,
-                    'status_kehadiran' => $request->status_kehadiran,
-                    'jam_masuk' => $request->jam_masuk,
-                    'keterangan' => $request->keterangan
-                ]);
+            
+            $absensi = DB::table('absensi')->where('id_absensi', $id)->first();
+            
+            if (!$absensi) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Data absensi tidak ditemukan'
+                ], 404);
             }
-
+            
+            // Hitung keterangan telat jika Hadir
+            $keterangan_final = $request->keterangan;
+            
+            if ($request->status_kehadiran == 'Hadir' && $request->jam_masuk) {
+                $jam_standar = '07:00:00';
+                $menit_telat = max(0, 
+                    (strtotime($request->jam_masuk) - strtotime($jam_standar)) / 60
+                );
+                
+                if ($menit_telat > 0) {
+                    $keterangan_final = trim(
+                        ($request->keterangan ? $request->keterangan . ' - ' : '') 
+                        . "Telat " . round($menit_telat) . " menit"
+                    );
+                } else {
+                    // Hapus keterangan telat jika tidak telat
+                    if (strpos($keterangan_final, 'Telat') !== false) {
+                        $keterangan_final = str_replace([' - Telat', 'Telat'], '', $keterangan_final);
+                        $keterangan_final = trim($keterangan_final, ' -');
+                    }
+                }
+            }
+            
+            DB::table('absensi')->where('id_absensi', $id)->update([
+                'status_kehadiran' => $request->status_kehadiran,
+                'jam_masuk' => $request->jam_masuk,
+                'keterangan' => $keterangan_final,
+                'updated_at' => now()
+            ]);
+            
+            // Log aktivitas
+            DB::table('log_aktivitas')->insert([
+                'id_user' => auth()->id(),
+                'aksi' => 'UPDATE_ABSENSI',
+                'tabel_terkait' => 'absensi',
+                'deskripsi' => 'Admin mengupdate absensi ID: ' . $id,
+                'waktu' => now(),
+                'ip_address' => $request->ip()
+            ]);
+            
             return response()->json([
                 'success' => true,
-                'message' => 'Absensi berhasil disimpan'
+                'message' => 'Absensi berhasil diupdate!'
             ]);
-
+            
         } catch (\Exception $e) {
+            \Log::error('Error update absensi: ' . $e->getMessage());
+            
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal menyimpan absensi: ' . $e->getMessage()
+                'message' => 'Gagal mengupdate absensi: ' . $e->getMessage()
             ], 500);
         }
     }
+
+    /**
+     * Hapus data absensi
+     */
+    public function deleteAbsensi(Request $request, $id)
+    {
+        try {
+            $absensi = DB::table('absensi')->where('id_absensi', $id)->first();
+            
+            if (!$absensi) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Data absensi tidak ditemukan'
+                ], 404);
+            }
+            
+            DB::table('absensi')->where('id_absensi', $id)->delete();
+            
+            // Log aktivitas
+            DB::table('log_aktivitas')->insert([
+                'id_user' => auth()->id(),
+                'aksi' => 'DELETE_ABSENSI',
+                'tabel_terkait' => 'absensi',
+                'deskripsi' => 'Admin menghapus absensi ID: ' . $id,
+                'waktu' => now(),
+                'ip_address' => $request->ip()
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Absensi berhasil dihapus!'
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Error delete absensi: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus absensi: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+public function kelolaAbsensi(Request $request)
+{
+    $selected_tanggal = $request->get('tanggal', Carbon::today()->format('Y-m-d'));
+    
+    // 1. Query data absensi
+    $absensi = DB::table('absensi')
+        ->select('absensi.*', 'users.nama_lengkap', 'users.role')
+        ->join('users', 'absensi.id_user', '=', 'users.id_user')
+        ->where('absensi.tanggal', $selected_tanggal)
+        ->orderBy('users.nama_lengkap')
+        ->get();
+    
+    // 2. Query karyawan aktif
+    $karyawan_aktif = DB::table('users')
+        ->where('role', 'karyawan')
+        ->where('status_aktif', 1)
+        ->orderBy('nama_lengkap')
+        ->get();
+    
+    // 3. Hitung statistik lengkap
+    $statistik = (object)[
+        'hadir' => $absensi->where('status_kehadiran', 'Hadir')->count(),
+        'izin' => $absensi->where('status_kehadiran', 'Izin')->count(),
+        'sakit' => $absensi->where('status_kehadiran', 'Sakit')->count(),
+        'alpha' => $absensi->where('status_kehadiran', 'Alpha')->count(),
+        'libur' => $absensi->where('status_kehadiran', 'Libur_Agama')->count(),
+        'belum_absen' => $karyawan_aktif->count() - $absensi->count(),
+        'total_karyawan' => $karyawan_aktif->count(),
+        'total_absen_hari_ini' => $absensi->count()
+    ];
+    
+    // 4. Return view dengan semua data
+    return view('admin.kelola-absensi', [
+        'absensi' => $absensi,
+        'karyawan_aktif' => $karyawan_aktif,
+        'statistik' => $statistik,
+        'selected_tanggal' => $selected_tanggal
+    ]);
+}
+
+public function inputAbsensi(Request $request)
+{
+    try {
+        // 1. Validasi input
+        $request->validate([
+            'id_user' => 'required|integer|exists:users,id_user',
+            'tanggal' => 'required|date',
+            'status_kehadiran' => 'required|string|in:Hadir,Izin,Sakit,Alpha,Libur_Agama',
+            'jam_masuk' => 'nullable|date_format:H:i',
+            'keterangan' => 'nullable|string|max:500'
+        ]);
+        
+        $today = Carbon::parse($request->tanggal)->format('Y-m-d');
+        
+        // 2. Cek apakah sudah absen
+        $existing = DB::table('absensi')
+            ->where('id_user', $request->id_user)
+            ->where('tanggal', $today)
+            ->first();
+            
+        if ($existing) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Karyawan sudah absen pada tanggal ini!'
+            ]);
+        }
+        
+        // 3. Hitung telat jika Hadir dengan jam masuk
+        $keterangan_final = $request->keterangan;
+        
+        if ($request->status_kehadiran == 'Hadir' && $request->jam_masuk) {
+            $jam_standar = '07:00:00';
+            $menit_telat = max(0, 
+                (strtotime($request->jam_masuk) - strtotime($jam_standar)) / 60
+            );
+            
+            if ($menit_telat > 0) {
+                $keterangan_final = trim(
+                    ($request->keterangan ? $request->keterangan . ' - ' : '') 
+                    . "Telat " . round($menit_telat) . " menit"
+                );
+            }
+        }
+        
+        // 4. Insert data absensi
+        DB::table('absensi')->insert([
+            'id_user' => $request->id_user,
+            'tanggal' => $today,
+            'status_kehadiran' => $request->status_kehadiran,
+            'jam_masuk' => $request->jam_masuk,
+            'keterangan' => $keterangan_final,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+        
+        // 5. Log aktivitas
+        DB::table('log_aktivitas')->insert([
+            'id_user' => auth()->id(),
+            'aksi' => 'INPUT_ABSENSI_ADMIN',
+            'tabel_terkait' => 'absensi',
+            'deskripsi' => 'Admin input absensi untuk karyawan ID: ' . $request->id_user,
+            'waktu' => now(),
+            'ip_address' => $request->ip()
+        ]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Absensi berhasil disimpan!'
+        ]);
+        
+    } catch (\Exception $e) {
+        \Log::error('Error input absensi: ' . $e->getMessage());
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Gagal menyimpan absensi: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
 
    public function laporanMasalah()
 {
@@ -381,7 +606,74 @@ public function deletePengeluaran($id)
             ], 500);
         }
     }
+// Di controller admin
+public function analyticsDashboard()
+{
+    // Data dari view dan function
+    $trendProduktivitas = DB::select("
+        SELECT 
+            DATE_FORMAT(tanggal, '%Y-%m') as bulan,
+            SUM(jumlah_kg) as total_kg,
+            AVG(jumlah_kg) as rata_kg,
+            fn_kategori_trend(SUM(jumlah_kg)) as trend
+        FROM panen_harian
+        WHERE tanggal >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+        GROUP BY DATE_FORMAT(tanggal, '%Y-%m')
+        ORDER BY bulan
+    ");
+    
+    $karyawanProblematic = DB::select("
+        SELECT 
+            u.nama_lengkap,
+            fn_hitung_poin_kinerja(u.id_user, 
+                DATE_SUB(NOW(), INTERVAL 30 DAY), 
+                NOW()
+            ) as poin,
+            (SELECT COUNT(*) FROM laporan_masalah 
+             WHERE id_user = u.id_user 
+             AND tanggal >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+            ) as jumlah_masalah
+        FROM users u
+        WHERE u.role = 'karyawan'
+        HAVING poin < 50 OR jumlah_masalah > 2
+        ORDER BY poin ASC
+        LIMIT 5
+    ");
+}
 
+public function generateReport(Request $request)
+{
+    $type = $request->type; // 'absensi', 'produktivitas', 'keuangan'
+    $period = $request->period; // 'harian', 'mingguan', 'bulanan'
+    
+    // Panggil stored procedure sesuai jenis laporan
+    switch($type) {
+        case 'absensi':
+            $data = DB::select('CALL sp_report_absensi(?, ?)', 
+                [$request->start_date, $request->end_date]);
+            break;
+            
+        case 'produktivitas':
+            $data = DB::select('CALL sp_report_produktivitas(?, ?)', 
+                [$request->start_date, $request->end_date]);
+            break;
+            
+        case 'keuangan':
+            $data = DB::select('CALL sp_report_keuangan(?, ?)', 
+                [$request->start_date, $request->end_date]);
+            break;
+    }
+    
+    // Format dengan function database
+    $formattedData = array_map(function($item) {
+        return [
+            'nama' => $item->nama,
+            'total' => DB::select('SELECT fn_format_rupiah(?) as f', [$item->total])[0]->f,
+            'persentase' => $item->persentase . '%',
+            'kategori' => DB::select('SELECT fn_kategori_nilai(?) as kategori', [$item->skor])[0]->kategori
+        ];
+    }, $data);
+}
     public function riwayatPemasukan(Request $request)
     {
         $query = Pemasukan::with('pencatat')->latest();
@@ -757,94 +1049,160 @@ public function storeGaji(Request $request)
         }
     }
 
-    public function rekapProduktivitas(Request $request)
-{
-    $startDate = $request->get('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
-    $endDate   = $request->get('end_date', Carbon::now()->endOfMonth()->format('Y-m-d'));
 
-    // Siapkan variabel default agar tidak muncul error "unassigned variable"
-    $produktivitasKaryawan = collect([]);
-    $produktivitasPerBlok = collect([]);
-    $topAbsensi = collect([]);
+public function rekapProduktivitas(Request $request)
+    {
+        $start_date = $request->get('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
+        $end_date = $request->get('end_date', Carbon::now()->format('Y-m-d'));
 
-    // ======================== PRODUKTIVITAS KARYAWAN ========================
-    $produktivitasKaryawan = DB::table('panen_harian')
-        ->join('users', 'panen_harian.id_user', '=', 'users.id_user')
-        ->whereBetween('panen_harian.tanggal', [$startDate, $endDate])
-        ->where('panen_harian.status_panen', 'diverifikasi')
-        ->where('users.status_aktif', 1)
-        ->where('users.role', 'karyawan')
-        ->selectRaw('
-            users.id_user,
-            users.nama_lengkap,
-            users.role,
-            COALESCE(COUNT(DISTINCT panen_harian.tanggal), 0) as hari_kerja,
-            COALESCE(SUM(panen_harian.jumlah_kg), 0) as total_kg,
-            COALESCE(SUM(panen_harian.total_upah), 0) as total_upah,
-            CASE 
-                WHEN COUNT(DISTINCT panen_harian.tanggal) > 0 
-                THEN COALESCE(SUM(panen_harian.jumlah_kg), 0) / COUNT(DISTINCT panen_harian.tanggal)
-                ELSE 0
-            END as rata_kg_per_hari
-        ')
-        ->groupBy('users.id_user', 'users.nama_lengkap', 'users.role')
-        ->orderBy('total_kg', 'desc')
-        ->get();
+        // 1. PRODUKTIVITAS PER BLOK LADANG - TANPA FILTER STATUS
+        $produktivitas_per_blok = DB::table('panen_harian as ph')
+            ->join('blok_ladang as bl', 'ph.id_blok', '=', 'bl.id_blok')
+            ->select([
+                'bl.id_blok',
+                'bl.nama_blok',
+                DB::raw('COUNT(DISTINCT ph.tanggal) as total_panen'),
+                DB::raw('COALESCE(SUM(ph.jumlah_kg), 0) as total_berat'),
+                DB::raw('CASE 
+                    WHEN COUNT(DISTINCT ph.tanggal) > 0 
+                    THEN COALESCE(SUM(ph.jumlah_kg), 0) / COUNT(DISTINCT ph.tanggal)
+                    ELSE 0 
+                END as rata_per_panen'),
+                DB::raw('COALESCE(SUM(ph.total_upah), 0) as total_upah'),
+                DB::raw('CASE 
+                    WHEN COALESCE(SUM(ph.jumlah_kg), 0) > 0 
+                    THEN COALESCE(SUM(ph.total_upah), 0) / COALESCE(SUM(ph.jumlah_kg), 1)
+                    ELSE 0 
+                END as rata_upah_per_kg'),
+                // Tambahan: jenis buah yang dominan
+                DB::raw('(
+                    SELECT jenis_buah 
+                    FROM panen_harian ph2 
+                    WHERE ph2.id_blok = bl.id_blok 
+                        AND ph2.tanggal BETWEEN ? AND ?
+                    GROUP BY jenis_buah 
+                    ORDER BY SUM(jumlah_kg) DESC 
+                    LIMIT 1
+                ) as jenis_buah_dominan')
+            ])
+            ->addBinding($start_date, 'select')
+            ->addBinding($end_date, 'select')
+            ->whereBetween('ph.tanggal', [$start_date, $end_date])
+            ->groupBy('bl.id_blok', 'bl.nama_blok')
+            ->orderBy('total_berat', 'desc')
+            ->get();
 
-    // ======================== PRODUKTIVITAS PER BLOK ========================
-    $produktivitasPerBlok = DB::table('panen_harian')
-        ->rightJoin('blok_ladang', 'panen_harian.id_blok', '=', 'blok_ladang.id_blok')
-        ->where(function ($q) use ($startDate, $endDate) {
-            $q->whereBetween('panen_harian.tanggal', [$startDate, $endDate])
-              ->orWhereNull('panen_harian.tanggal');
-        })
-        ->selectRaw('
-            blok_ladang.id_blok,
-            blok_ladang.nama_blok,
-            COALESCE(SUM(panen_harian.jumlah_kg), 0) as total_berat,
-            COALESCE(COUNT(panen_harian.id_panen), 0) as total_panen,
-            CASE
-                WHEN COUNT(panen_harian.id_panen) > 0
-                THEN AVG(panen_harian.jumlah_kg)
-                ELSE 0
-            END as rata_per_panen,
-            COALESCE(SUM(panen_harian.total_upah), 0) as total_upah,
-            COALESCE(GROUP_CONCAT(DISTINCT panen_harian.jenis_buah), "Tidak ada") as jenis_buah
-        ')
-        ->groupBy('blok_ladang.id_blok', 'blok_ladang.nama_blok')
-        ->orderBy('total_berat', 'desc')
-        ->get();
+        // 2. PRODUKTIVITAS KARYAWAN - TANPA FILTER STATUS
+        $produktivitas_karyawan = DB::table('panen_harian as ph')
+            ->join('users as u', 'ph.id_user', '=', 'u.id_user')
+            ->select([
+                'u.id_user',
+                'u.nama_lengkap',
+                'u.role',
+                DB::raw('COUNT(DISTINCT ph.tanggal) as hari_kerja'),
+                DB::raw('COALESCE(SUM(ph.jumlah_kg), 0) as total_kg'),
+                DB::raw('COALESCE(SUM(ph.total_upah), 0) as total_upah'),
+                DB::raw('CASE 
+                    WHEN COUNT(DISTINCT ph.tanggal) > 0 
+                    THEN COALESCE(SUM(ph.jumlah_kg), 0) / COUNT(DISTINCT ph.tanggal)
+                    ELSE 0 
+                END as rata_perhari'),
+                DB::raw('CASE 
+                    WHEN COUNT(DISTINCT ph.tanggal) > 0 
+                    THEN COALESCE(SUM(ph.total_upah), 0) / COUNT(DISTINCT ph.tanggal)
+                    ELSE 0 
+                END as rata_upah_per_hari'),
+                // Tambahan: persentase buah segar vs gugur
+                DB::raw('ROUND(
+                    SUM(CASE WHEN ph.jenis_buah = "buah_segar" THEN ph.jumlah_kg ELSE 0 END) * 100.0 / 
+                    NULLIF(SUM(ph.jumlah_kg), 0), 
+                    1
+                ) as persentase_buah_segar')
+            ])
+            ->where('u.role', 'karyawan')
+            ->where('u.status_aktif', 1)
+            ->whereBetween('ph.tanggal', [$start_date, $end_date])
+            ->groupBy('u.id_user', 'u.nama_lengkap', 'u.role')
+            ->orderBy('total_kg', 'desc')
+            ->get();
 
-    // ======================== TOP ABSENSI ========================
-    $topAbsensi = DB::table('absensi')
-        ->join('users', 'absensi.id_user', '=', 'users.id_user')
-        ->whereBetween('absensi.tanggal', [$startDate, $endDate])
-        ->where('users.role', 'karyawan')
-        ->where('users.status_aktif', 1)
-        ->selectRaw('
-            users.id_user,
-            users.nama_lengkap,
-            users.role,
-            SUM(CASE WHEN absensi.status_kehadiran = "Alpha" THEN 1 ELSE 0 END) as total_alpha,
-            SUM(CASE WHEN absensi.status_kehadiran = "Hadir" THEN 1 ELSE 0 END) as total_hadir,
-            COUNT(absensi.id_absensi) as total_absensi
-        ')
-        ->groupBy('users.id_user', 'users.nama_lengkap', 'users.role')
-        ->orderBy('total_alpha', 'desc')
-        ->orderBy('total_hadir', 'asc')
-        ->take(3)
-        ->get();
+        // 3. TOP PERFORMERS - Berdasarkan total hadir
+$top_performers = DB::table('users as u')
+    ->leftJoin('absensi as a', function($join) use ($start_date, $end_date) {
+        $join->on('u.id_user', '=', 'a.id_user')
+             ->whereBetween('a.tanggal', [$start_date, $end_date]);
+    })
+    ->select([
+        'u.id_user',
+        'u.nama_lengkap',
+        DB::raw('SUM(CASE WHEN a.status_kehadiran = "Hadir" THEN 1 ELSE 0 END) as total_hadir'),
+        DB::raw('SUM(CASE WHEN a.status_kehadiran = "Alpha" THEN 1 ELSE 0 END) as total_alpha'),
+        DB::raw('COUNT(DISTINCT a.id_absensi) as total_hari_absensi')
+    ])
+    ->where('u.role', 'karyawan')
+    ->where('u.status_aktif', 1)
+    ->groupBy('u.id_user', 'u.nama_lengkap')
+    ->orderBy('total_hadir', 'desc')   // Ranking berdasarkan hadir
+    ->orderBy('total_alpha', 'asc')
+    ->limit(5)
+    ->get();
 
-    // ======================== RETURN VIEW ========================
-    return view('admin.rekap-produktivitas', [
-        'produktivitas_karyawan' => $produktivitasKaryawan,
-        'produktivitas_per_blok' => $produktivitasPerBlok,
-        'top_absensi' => $topAbsensi,
-        'start_date' => $startDate,
-        'end_date' => $endDate
-    ]);
-}
 
+        // 4. STATISTIK KESELURUHAN - Semua data tanpa filter status
+        $total_berat_kg = $produktivitas_per_blok->sum('total_berat');
+        $total_upah_keseluruhan = $produktivitas_per_blok->sum('total_upah');
+        $rata_per_panen_keseluruhan = $produktivitas_per_blok->avg('rata_per_panen') ?? 0;
+        $jumlah_karyawan_aktif = $produktivitas_karyawan->count();
+        
+        // Hitung total buah segar vs gugur
+        $jenis_buah_stats = DB::table('panen_harian')
+            ->select([
+                DB::raw('SUM(CASE WHEN jenis_buah = "buah_segar" THEN jumlah_kg ELSE 0 END) as total_buah_segar'),
+                DB::raw('SUM(CASE WHEN jenis_buah = "buah_gugur" THEN jumlah_kg ELSE 0 END) as total_buah_gugur'),
+                DB::raw('COUNT(DISTINCT id_user) as jumlah_karyawan_total')
+            ])
+            ->whereBetween('tanggal', [$start_date, $end_date])
+            ->first();
+
+        // 5. DATA CHART
+        $chart_data = [
+            'labels' => $produktivitas_per_blok->pluck('nama_blok')->toArray(),
+            'berat' => $produktivitas_per_blok->pluck('total_berat')->toArray(),
+            'upah' => $produktivitas_per_blok->pluck('total_upah')->toArray(),
+            'jenis_buah' => [
+                'segar' => $jenis_buah_stats->total_buah_segar ?? 0,
+                'gugur' => $jenis_buah_stats->total_buah_gugur ?? 0
+            ]
+        ];
+
+        return view('admin.rekap-produktivitas', [
+            'produktivitas_per_blok' => $produktivitas_per_blok,
+            'produktivitas_karyawan' => $produktivitas_karyawan,
+            'top_performers' => $top_performers,
+            'chart_data' => $chart_data,
+            'start_date' => $start_date,
+            'end_date' => $end_date,
+            'total_berat_kg' => $total_berat_kg,
+            'total_upah_keseluruhan' => $total_upah_keseluruhan,
+            'rata_per_panen_keseluruhan' => $rata_per_panen_keseluruhan,
+            'jumlah_karyawan_aktif' => $jumlah_karyawan_aktif,
+            'jenis_buah_stats' => $jenis_buah_stats
+        ]);
+    }
+    // Fungsi format berat (ton/kg)
+    private function formatBerat($beratKg)
+    {
+        if ($beratKg >= 1000) {
+            return number_format($beratKg / 1000, 2) . ' ton';
+        }
+        return number_format($beratKg, 0) . ' kg';
+    }
+
+    // Fungsi format rupiah
+    private function formatRupiah($angka)
+    {
+        return 'Rp ' . number_format($angka, 0, ',', '.');
+    }
     public function getDashboardStats()
     {
         try {

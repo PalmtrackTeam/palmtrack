@@ -48,7 +48,6 @@
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jenis Buah</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah (kg)</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Upah</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
@@ -68,11 +67,6 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             Rp {{ number_format($panen->total_upah, 0, ',', '.') }}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-2 py-1 text-xs rounded-full {{ $panen->status_panen_class }}">
-                                {{ $panen->status_panen_text }}
-                            </span>
                         </td>
                     </tr>
                     @endforeach

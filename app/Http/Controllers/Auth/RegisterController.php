@@ -16,10 +16,10 @@ class RegisterController extends Controller
      */
     public function showRegistrationForm()
     {
-        // Ambil kategori unik (dekat, jauh)
-        $kategori = BlokLadang::select('kategori')->groupBy('kategori')->get();
+        // Ambil semua blok ladang untuk dropdown
+        $bloks = BlokLadang::orderBy('nama_blok')->get();
 
-        return view('auth.register', compact('kategori'));
+        return view('auth.register', compact('bloks'));
     }
 
     /**
@@ -32,22 +32,15 @@ class RegisterController extends Controller
             'nama_lengkap'   => 'required|string|max:255',
             'email'          => 'required|string|email|max:255|unique:users,email',
             'password'       => 'required|string|min:8|confirmed',
-
-            // kategori dekat/jauh
-            'kategori'       => 'required|in:dekat,jauh',
-
+            'id_blok'        => 'required|exists:blok_ladang,id_blok',
             'no_telepon'     => 'nullable|string|max:20',
             'alamat'         => 'nullable|string',
         ]);
 
-        // AMBIL id_blok berdasarkan kategori
-        $blok = BlokLadang::where('kategori', $request->kategori)->first();
+        // Ambil data blok berdasarkan id_blok yang dipilih
+        $blok = BlokLadang::findOrFail($request->id_blok);
 
-        if (!$blok) {
-            return back()->withErrors(['kategori' => 'Kategori blok tidak ditemukan!']);
-        }
-
-        // SAVE user
+        // Save user
         $user = User::create([
             'username'       => $request->username,
             'nama_lengkap'   => $request->nama_lengkap,
@@ -56,8 +49,11 @@ class RegisterController extends Controller
 
             'role'           => 'karyawan', // otomatis
 
-            // INILAH YANG MASUK KE TABLE
+            // Simpan id_blok yang dipilih user
             'id_blok'        => $blok->id_blok,
+
+            // Simpan kategori dari blok yang dipilih
+            'kategori_blok'  => $blok->kategori,
 
             'status_aktif'   => true,
             'no_telepon'     => $request->no_telepon,
@@ -71,6 +67,6 @@ class RegisterController extends Controller
         Auth::login($user);
 
         return redirect()->route('karyawan.dashboard')
-            ->with('success', 'Akun karyawan berhasil dibuat!');
+            ->with('success', 'Akun karyawan berhasil dibuat! Anda ditempatkan di blok ' . $blok->nama_blok);
     }
 }

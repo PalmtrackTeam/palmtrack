@@ -174,7 +174,7 @@
                             </div>
                             <div class="ml-4">
                                 <p class="text-sm font-medium text-gray-600">Karyawan Aktif</p>
-                                <p class="text-2xl font-bold text-gray-900">{{ $total_karyawan_aktif }}</p>
+                                <p class="text-2xl font-bold text-gray-900">{{ $dashboard_stats->total_karyawan_aktif ?? 0 }}</p>
                             </div>
                         </div>
                     </div>
@@ -198,7 +198,7 @@
                             </div>
                             <div class="ml-4">
                                 <p class="text-sm font-medium text-gray-600">Hadir Hari Ini</p>
-                                <p class="text-2xl font-bold text-gray-900">{{ $absensi_hari_ini->total_hadir ?? 0 }}</p>
+                                <p class="text-2xl font-bold text-gray-900">{{ $ringkasan_absensi->total_hadir ?? 0 }}</p>
                             </div>
                         </div>
                     </div>
@@ -210,7 +210,7 @@
                             </div>
                             <div class="ml-4">
                                 <p class="text-sm font-medium text-gray-600">Belum Absen</p>
-                                <p class="text-2xl font-bold text-gray-900">{{ $karyawan_belum_absen->count() }}</p>
+                                <p class="text-2xl font-bold text-gray-900">{{ $ringkasan_absensi->total_hadir ?? 0 }}  </p>
                             </div>
                         </div>
                     </div>
@@ -279,19 +279,19 @@
                         <h3 class="text-lg font-semibold text-gray-900 mb-4">Ringkasan Absensi</h3>
                         <div class="grid grid-cols-2 gap-4">
                             <div class="text-center p-3 bg-green-50 rounded-lg">
-                                <div class="text-xl font-bold text-green-600">{{ $absensi_hari_ini->total_hadir ?? 0 }}</div>
+                                <div class="text-xl font-bold text-green-600"> {{ $ringkasan_absensi->total_hadir ?? 0 }} </div>
                                 <div class="text-sm text-green-800">Hadir</div>
                             </div>
                             <div class="text-center p-3 bg-blue-50 rounded-lg">
-                                <div class="text-xl font-bold text-blue-600">{{ $absensi_hari_ini->total_izin ?? 0 }}</div>
+                                <div class="text-xl font-bold text-blue-600">{{ $ringkasan_absensi->total_izin ?? 0 }} </div>
                                 <div class="text-sm text-blue-800">Izin</div>
                             </div>
                             <div class="text-center p-3 bg-orange-50 rounded-lg">
-                                <div class="text-xl font-bold text-orange-600">{{ $absensi_hari_ini->total_sakit ?? 0 }}</div>
+                                <div class="text-xl font-bold text-orange-600">{{ $ringkasan_absensi->total_sakit ?? 0 }}  </div>
                                 <div class="text-sm text-orange-800">Sakit</div>
                             </div>
                             <div class="text-center p-3 bg-red-50 rounded-lg">
-                                <div class="text-xl font-bold text-red-600">{{ $absensi_hari_ini->total_alpha ?? 0 }}</div>
+                                <div class="text-xl font-bold text-red-600">{{ $ringkasan_absensi->total_alpha ?? 0 }}  </div>
                                 <div class="text-sm text-red-800">Alpha</div>
                             </div>
                         </div>

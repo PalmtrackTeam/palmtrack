@@ -3,24 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rekap Produktivitas - {{ auth()->user()->role == 'owner' ? 'Owner' : 'Admin' }}</title>
+    <title>Rekap Produktivitas - {{ ucfirst(auth()->user()->role) }}</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
-        .card-shadow { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
-        @media print {
-            .no-print { display: none; }
-            body { background: white; }
-            .card-shadow { box-shadow: none; border: 1px solid #e5e7eb; }
+        .bg-role-primary { 
+            background-color: {{ auth()->user()->role == 'owner' ? '#1e40af' : '#059669' }}; 
+        }
+        .bg-role-secondary { 
+            background-color: {{ auth()->user()->role == 'owner' ? '#3b82f6' : '#10b981' }}; 
         }
     </style>
 </head>
 <body class="bg-gray-50">
-    <!-- Navigation - Dinamis berdasarkan role -->
-    <nav class="{{ auth()->user()->role == 'owner' ? 'bg-blue-800' : 'bg-green-800' }} text-white shadow-lg no-print">
+    <!-- Navigation -->
+    <nav class="bg-role-primary text-white shadow-lg no-print">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
@@ -31,14 +31,14 @@
                     <i class="fas fa-tractor text-xl mr-3"></i>
                     <span class="font-semibold text-xl">Rekap Produktivitas</span>
                     <span class="ml-2 text-sm bg-white bg-opacity-20 px-2 py-1 rounded">
-                        {{ auth()->user()->role == 'owner' ? 'Owner' : 'Admin' }}
+                        {{ ucfirst(auth()->user()->role) }}
                     </span>
                 </div>
                 <div class="flex items-center space-x-4">
                     <span class="text-gray-200">{{ auth()->user()->nama_lengkap }}</span>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
-                        <button type="submit" class="{{ auth()->user()->role == 'owner' ? 'bg-blue-700 hover:bg-blue-600' : 'bg-green-700 hover:bg-green-600' }} px-3 py-1 rounded transition-colors">
+                        <button type="submit" class="bg-role-secondary hover:bg-role-secondary/80 px-3 py-1 rounded transition-colors">
                             <i class="fas fa-sign-out-alt mr-1"></i>Logout
                         </button>
                     </form>
@@ -50,12 +50,12 @@
     <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <!-- Header -->
         <div class="mb-6">
-            <h1 class="text-2xl font-bold text-gray-900">Rekap Produktivitas Kebun</h1>
-            <p class="text-gray-600">Analisis performa per blok dan produktivitas</p>
+            <h1 class="text-2xl font-bold text-gray-900">Rekap Produktivitas Lengkap</h1>
+            <p class="text-gray-600">Analisis semua data panen tanpa filter status</p>
         </div>
 
         <!-- Date Filter -->
-        <div class="bg-white rounded-xl card-shadow p-6 mb-6 no-print">
+        <div class="bg-white rounded-lg shadow p-6 mb-6 no-print">
             <form method="GET" class="flex flex-col md:flex-row gap-4 items-end">
                 <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -70,271 +70,340 @@
                     </div>
                 </div>
                 <div class="flex gap-2">
-                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                    <button type="submit" class="bg-role-primary text-white px-4 py-2 rounded-lg hover:bg-role-primary/90 transition-colors">
                         <i class="fas fa-filter mr-2"></i>Filter
                     </button>
                     <button type="button" onclick="resetFilter()" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors">
                         <i class="fas fa-refresh mr-2"></i>Reset
                     </button>
-                    @if(auth()->user()->role == 'owner')
-                    <button type="button" onclick="exportToPDF()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
-                        <i class="fas fa-file-pdf mr-2"></i>Export PDF
+                    <button type="button" onclick="window.print()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors no-print">
+                        <i class="fas fa-print mr-2"></i>Print
                     </button>
-                    @endif
                 </div>
             </form>
         </div>
 
-        <!-- Productivity Stats - DIKOREKSI TANPA KARYAWAN_AKTIF -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div class="bg-white rounded-xl card-shadow p-4 text-center">
+        <!-- Statistik Utama -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white rounded-lg shadow p-4 text-center">
                 <div class="text-2xl font-bold text-blue-600">
-                    {{ number_format($produktivitas_per_blok->sum('total_berat'), 0, ',', '.') }} kg
+                    @if($total_berat_kg >= 1000)
+                        {{ number_format($total_berat_kg / 1000, 2) }} ton
+                    @else
+                        {{ number_format($total_berat_kg, 0) }} kg
+                    @endif
                 </div>
-                <div class="text-sm text-gray-600">Total Panen</div>
+                <div class="text-sm text-gray-600">Total Panen (Semua Status)</div>
             </div>
-            <div class="bg-white rounded-xl card-shadow p-4 text-center">
+            <div class="bg-white rounded-lg shadow p-4 text-center">
                 <div class="text-2xl font-bold text-green-600">
-                    Rp {{ number_format($produktivitas_per_blok->sum('total_upah'), 0, ',', '.') }}
+                    Rp {{ number_format($total_upah_keseluruhan, 0, ',', '.') }}
                 </div>
-                <div class="text-sm text-gray-600">Total Upah</div>
+                <div class="text-sm text-gray-600">Total Upah Dihitung</div>
             </div>
-            <div class="bg-white rounded-xl card-shadow p-4 text-center">
+            <div class="bg-white rounded-lg shadow p-4 text-center">
                 <div class="text-2xl font-bold text-purple-600">
-                    {{ number_format($produktivitas_per_blok->avg('rata_per_panen') ?? 0, 1) }} kg
+                    {{ number_format($rata_per_panen_keseluruhan, 1) }} kg
                 </div>
                 <div class="text-sm text-gray-600">Rata-rata per Panen</div>
             </div>
+            <div class="bg-white rounded-lg shadow p-4 text-center">
+                <div class="text-2xl font-bold text-orange-600">
+                    {{ $jumlah_karyawan_aktif }}
+                </div>
+                <div class="text-sm text-gray-600">Karyawan Aktif</div>
+            </div>
         </div>
 
+        <!-- Dua Kolom Utama -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <!-- Productivity by Block -->
-            <div class="bg-white rounded-xl card-shadow p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Produktivitas per Blok</h3>
-                <div class="space-y-3">
+            <!-- Produktivitas per Blok -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                    <i class="fas fa-map-marker-alt text-blue-500 mr-2"></i>
+                    Produktivitas per Blok
+                </h3>
+                <div class="space-y-3 max-h-96 overflow-y-auto">
                     @foreach($produktivitas_per_blok as $blok)
-                    <div class="flex justify-between items-center p-3 border border-gray-200 rounded-lg">
-                        <div class="font-medium text-gray-900">{{ $blok->nama_blok }}</div>
+                    <div class="flex justify-between items-center p-3 border border-gray-200 rounded-lg hover:bg-blue-50 transition-colors">
+                        <div>
+                            <div class="font-medium text-gray-900">{{ $blok->nama_blok }}</div>
+                            <div class="text-xs text-gray-500 mt-1">
+                                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded mr-2">
+                                    {{ $blok->total_panen }} panen
+                                </span>
+                                @if($blok->jenis_buah_dominan)
+                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded">
+                                    {{ $blok->jenis_buah_dominan == 'buah_segar' ? 'Segar' : 'Gugur' }}
+                                </span>
+                                @endif
+                            </div>
+                        </div>
                         <div class="text-right">
-                            <div class="font-semibold text-blue-600">{{ number_format($blok->total_berat, 0, ',', '.') }} kg</div>
-                            <div class="text-sm text-gray-500">{{ $blok->total_panen }} kali panen</div>
+                            <div class="font-semibold text-blue-600">
+                                @if($blok->total_berat >= 1000)
+                                    {{ number_format($blok->total_berat / 1000, 2) }} ton
+                                @else
+                                    {{ number_format($blok->total_berat, 0) }} kg
+                                @endif
+                            </div>
+                            <div class="text-sm text-gray-500">
+                                Rp {{ number_format($blok->rata_upah_per_kg, 0) }}/kg
+                            </div>
                         </div>
                     </div>
                     @endforeach
+                    
+                    @if($produktivitas_per_blok->isEmpty())
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-seedling text-3xl mb-3"></i>
+                        <p>Belum ada data panen untuk periode ini</p>
+                    </div>
+                    @endif
                 </div>
             </div>
 
-            <!-- Top Performers (Absensi) -->
-<div class="bg-white rounded-xl card-shadow p-6">
-    <h3 class="text-lg font-semibold text-gray-900 mb-4">Top Performers</h3>
+            <!-- Top Performers -->
+<div class="bg-white rounded-lg shadow p-6">
+    <h3 class="text-lg font-semibold text-gray-900 mb-4">
+        <i class="fas fa-trophy text-yellow-500 mr-2"></i>
+        Top 5 Performers (Berdasarkan Kehadiran)
+    </h3>
 
     <div class="space-y-3">
-
         @php
-            $rankColor = [
-                1 => 'bg-yellow-500 text-white',
-                2 => 'bg-gray-400 text-white',
-                3 => 'bg-orange-500 text-white'
+            $rankColors = [
+                'bg-yellow-500',  // Rank 1
+                'bg-gray-400',    // Rank 2
+                'bg-orange-500',  // Rank 3
+                'bg-blue-400',    // Rank 4
+                'bg-green-400'    // Rank 5
             ];
         @endphp
 
-        @if(isset($top_absensi) && $top_absensi->count() > 0)
-            @foreach($top_absensi as $index => $karyawan)
-
-            <div class="p-3 border border-gray-200 rounded-lg flex items-center gap-3">
-
-                <!-- Ranking -->
-                <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold
-                    {{ $rankColor[$index+1] ?? 'bg-green-600 text-white' }}">
+        @foreach($top_performers as $index => $performer)
+        <div class="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-yellow-50 transition-colors">
+            
+            <!-- Rank + Name -->
+            <div class="flex items-center flex-1">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm {{ $rankColors[$index] ?? 'bg-gray-300' }}">
                     {{ $index + 1 }}
                 </div>
 
-                <!-- Avatar + Nama -->
-                <div class="flex items-center gap-3 flex-1">
-                    <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center 
-                        text-green-600 font-semibold text-sm uppercase">
-                        {{ substr($karyawan->nama_lengkap, 0, 1) }}
-                    </div>
+                <div class="ml-3">
+                    <div class="font-semibold text-gray-900">{{ $performer->nama_lengkap }}</div>
 
-                    <div>
-                        <div class="font-medium text-gray-900 text-sm leading-tight">
-                            {{ $karyawan->nama_lengkap }}
-                        </div>
-                        <div class="text-xs text-gray-600 capitalize leading-tight">
-                            {{ $karyawan->role }}
-                        </div>
-                    </div>
-                </div>
+                    <div class="text-xs text-gray-500 flex items-center gap-3 mt-1">
+                        <span class="text-green-600 flex items-center gap-1">
+                            <i class="fas fa-user-check"></i> 
+                            {{ $performer->total_hadir }} hadir
+                        </span>
 
-                <!-- Statistik -->
-                <div class="text-right leading-tight">
-                    <div class="text-xs text-green-600 font-semibold">
-                        Hadir: {{ $karyawan->total_hadir }} hari
-                    </div>
-                    <div class="text-xs text-red-500 font-semibold">
-                        Alpha: {{ $karyawan->total_alpha }}
+                        <span class="text-red-600 flex items-center gap-1">
+                            <i class="fas fa-user-times"></i> 
+                            {{ $performer->total_alpha }} alpha
+                        </span>
                     </div>
                 </div>
             </div>
 
-            @endforeach
-        @else
-            <div class="text-center py-4 text-gray-500">
-                <i class="fas fa-chart-line text-2xl mb-2"></i>
-                <p>Belum ada data absensi</p>
-            </div>
+        </div>
+        @endforeach
+
+        @if($top_performers->isEmpty())
+        <div class="text-center py-8 text-gray-500">
+            <i class="fas fa-user-check text-3xl mb-3"></i>
+            <p>Belum ada data performers</p>
+        </div>
         @endif
     </div>
 </div>
 
-
-        <!-- Detailed Productivity Table -->
-        <div class="bg-white rounded-xl card-shadow overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                <h3 class="text-lg font-semibold text-gray-900">Detail Produktivitas per Blok</h3>
-                @if(auth()->user()->role == 'owner')
-                <div class="flex gap-2 no-print">
-                    <button onclick="printTable()" class="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600">
-                        <i class="fas fa-print mr-1"></i>Print
-                    </button>
+        <!-- Tabel Detail Karyawan -->
+        
+        <!-- Grafik untuk Owner -->
+        @if(auth()->user()->role == 'owner' && !empty($chart_data['labels']))
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <!-- Grafik Produktivitas Blok -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Produktivitas per Blok</h3>
+                <div class="h-64">
+                    <canvas id="blokChart"></canvas>
                 </div>
-                @endif
             </div>
-            <div class="p-6">
-                <div class="overflow-x-auto">
-                    <table class="w-full" id="productivityTable">
-                        <thead>
-                            <tr class="bg-gray-50">
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">No</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nama Blok</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Jumlah Panen</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Berat (kg)</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rata-rata per Panen</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Upah</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200">
-                            @foreach($produktivitas_per_blok as $index => $blok)
-                            <tr class="hover:bg-gray-50 transition-colors">
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {{ $index + 1 }}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="font-semibold text-gray-900">{{ $blok->nama_blok }}</div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {{ $blok->total_panen }}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {{ number_format($blok->total_berat, 0, ',', '.') }} kg
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {{ number_format($blok->rata_per_panen ?? 0, 1) }} kg
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    Rp {{ number_format($blok->total_upah, 0, ',', '.') }}
-                                </td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-
-                @if($produktivitas_per_blok->isEmpty())
-                <div class="text-center py-12 text-gray-500">
-                    <i class="fas fa-chart-bar text-3xl mb-3 text-gray-400"></i>
-                    <p>Tidak ada data produktivitas untuk periode ini</p>
-                </div>
-                @endif
-            </div>
-        </div>
-
-        <!-- Tabel Produktivitas Karyawan (jika ada data) -->
-        @if(isset($produktivitas_karyawan) && $produktivitas_karyawan->count() > 0)
-        <div class="bg-white rounded-xl card-shadow overflow-hidden mt-6">
-            <div class="px-6 py-4 border-b border-gray-200">
-                <h3 class="text-lg font-semibold text-gray-900">Produktivitas Karyawan</h3>
-            </div>
-            <div class="p-6">
-                <div class="overflow-x-auto">
-                    <table class="w-full" id="employeeProductivityTable">
-                        <thead>
-                            <tr class="bg-gray-50">
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">No</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nama Karyawan</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Jabatan</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hari Kerja</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Panen (kg)</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rata-rata/hari</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Upah</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200">
-                            @foreach($produktivitas_karyawan as $index => $karyawan)
-                            <tr class="hover:bg-gray-50 transition-colors">
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {{ $index + 1 }}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="font-semibold text-gray-900">{{ $karyawan->nama_lengkap }}</div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
-                                    {{ $karyawan->role }}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {{ $karyawan->hari_kerja }}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {{ number_format($karyawan->total_kg, 0, ',', '.') }} kg
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {{ number_format($karyawan->rata_kg_per_hari, 1) }} kg
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    Rp {{ number_format($karyawan->total_upah, 0, ',', '.') }}
-                                </td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+            
+            <!-- Grafik Jenis Buah -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Distribusi Jenis Buah</h3>
+                <div class="h-64">
+                    <canvas id="jenisBuahChart"></canvas>
                 </div>
             </div>
         </div>
         @endif
 
-        <!-- Periode Info -->
-        <div class="mt-4 text-center text-sm text-gray-500">
-            <i class="fas fa-calendar-alt mr-1"></i>
-            Periode: {{ \Carbon\Carbon::parse($start_date)->format('d M Y') }} - {{ \Carbon\Carbon::parse($end_date)->format('d M Y') }}
+        <!-- Summary -->
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Ringkasan Data</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-blue-50 p-4 rounded-lg">
+                    <h4 class="font-medium text-blue-800 mb-2">Statistik Keseluruhan</h4>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Total Data Panen:</span>
+                            <span class="font-semibold">{{ $produktivitas_per_blok->sum('total_panen') }} record</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Blok yang Berproduksi:</span>
+                            <span class="font-semibold">{{ $produktivitas_per_blok->count() }} blok</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Karyawan Beraktivitas:</span>
+                            <span class="font-semibold">{{ $produktivitas_karyawan->count() }} orang</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <h4 class="font-medium text-green-800 mb-2">Jenis Buah</h4>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Buah Segar:</span>
+                            <span class="font-semibold">
+                                {{ number_format($jenis_buah_stats->total_buah_segar ?? 0, 0) }} kg
+                            </span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Buah Gugur:</span>
+                            <span class="font-semibold">
+                                {{ number_format($jenis_buah_stats->total_buah_gugur ?? 0, 0) }} kg
+                            </span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Rasio:</span>
+                            <span class="font-semibold">
+                                @php
+                                    $total = ($jenis_buah_stats->total_buah_segar ?? 0) + ($jenis_buah_stats->total_buah_gugur ?? 0);
+                                    $ratio = $total > 0 ? ($jenis_buah_stats->total_buah_segar ?? 0) / $total * 100 : 0;
+                                @endphp
+                                {{ number_format($ratio, 1) }}% segar
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center text-sm text-gray-500 mt-6">
+            <div class="flex items-center justify-center space-x-4">
+                <span>
+                    <i class="fas fa-calendar-alt mr-1"></i>
+                    Periode: {{ \Carbon\Carbon::parse($start_date)->format('d M Y') }} - {{ \Carbon\Carbon::parse($end_date)->format('d M Y') }}
+                </span>
+                <span>•</span>
+                <span>
+                    <i class="fas fa-database mr-1"></i>
+                    Total Data: {{ $produktivitas_per_blok->sum('total_panen') }} panen
+                </span>
+                <span>•</span>
+                <span>
+                    <i class="fas fa-clock mr-1"></i>
+                    Dicetak: {{ now()->format('d M Y H:i') }}
+                </span>
+            </div>
         </div>
     </div>
 
     <script>
+        // Reset filter
         function resetFilter() {
-            // Redirect ke route yang sesuai berdasarkan role
-            @if(auth()->user()->role == 'owner')
-            window.location.href = '{{ route("owner.rekap-produktivitas") }}';
-            @else
-            window.location.href = '{{ route("admin.rekap-produktivitas") }}';
-            @endif
+            window.location.href = '{{ route(auth()->user()->role . ".rekap-produktivitas") }}';
         }
 
-        function printTable() {
-            window.print();
-        }
-
-        function exportToPDF() {
-            alert('Fitur export PDF akan segera tersedia!');
-            // Implementasi export PDF bisa ditambahkan di sini
-        }
-
-        // Set default dates if not set
+        // Set default dates
         @if(!request()->has('start_date'))
         document.querySelector('input[name="start_date"]').value = new Date().toISOString().split('T')[0].substring(0, 8) + '01';
         @endif
 
         @if(!request()->has('end_date'))
         document.querySelector('input[name="end_date"]').value = new Date().toISOString().split('T')[0];
+        @endif
+
+        // Grafik untuk Owner
+        @if(auth()->user()->role == 'owner')
+        
+        // Grafik Blok
+        const blokCtx = document.getElementById('blokChart')?.getContext('2d');
+        if (blokCtx) {
+            new Chart(blokCtx, {
+                type: 'bar',
+                data: {
+                    labels: @json($chart_data['labels']),
+                    datasets: [{
+                        label: 'Total Berat (kg)',
+                        data: @json($chart_data['berat']),
+                        backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                        borderColor: 'rgb(59, 130, 246)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: true
+                        },
+                        title: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Berat (kg)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Grafik Jenis Buah
+        const buahCtx = document.getElementById('jenisBuahChart')?.getContext('2d');
+        if (buahCtx) {
+            new Chart(buahCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Buah Segar', 'Buah Gugur'],
+                    datasets: [{
+                        data: [
+                            {{ $chart_data['jenis_buah']['segar'] ?? 0 }},
+                            {{ $chart_data['jenis_buah']['gugur'] ?? 0 }}
+                        ],
+                        backgroundColor: [
+                            'rgba(34, 197, 94, 0.7)',
+                            'rgba(251, 146, 60, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgb(34, 197, 94)',
+                            'rgb(251, 146, 60)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
         @endif
     </script>
 </body>

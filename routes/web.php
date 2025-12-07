@@ -98,7 +98,9 @@ Route::delete('/pemasukan/{id}', [AdminDashboardController::class, 'destroy'])->
 
         // Rekap Produktivitas
         Route::get('/rekap-produktivitas', [AdminDashboardController::class, 'rekapProduktivitas'])->name('rekap-produktivitas');
-
+  Route::get('/kelola-absensi/{id}/edit', [AdminDashboardController::class, 'editAbsensi'])->name('absensi.edit');
+    Route::put('/kelola-absensi/{id}', [AdminDashboardController::class, 'updateAbsensi'])->name('absensi.update');
+    Route::delete('/kelola-absensi/{id}', [AdminDashboardController::class, 'deleteAbsensi'])->name('absensi.delete');
         // Absensi
         Route::get('/kelola-absensi', [AdminDashboardController::class, 'kelolaAbsensi'])->name('kelola-absensi');
         Route::post('/input-absensi', [AdminDashboardController::class, 'inputAbsensi'])->name('input-absensi');
@@ -138,7 +140,25 @@ Route::delete('/pemasukan/{id}', [AdminDashboardController::class, 'destroy'])->
         Route::get('/riwayat-laporan-masalah', [AdminDashboardController::class, 'riwayatLaporanMasalah'])->name('riwayat-laporan-masalah');
     });
 
-
+// routes/web.php - tambahkan route untuk fitur baru
+Route::middleware(['auth'])->prefix('karyawan')->name('karyawan.')->group(function () {
+    // Routes yang sudah ada
+    Route::get('/absensi', [AbsensiController::class, 'create'])->name('absensi');
+    Route::post('/absensi', [AbsensiController::class, 'store'])->name('store-absensi');
+    Route::get('/riwayat-absensi', [AbsensiController::class, 'riwayat'])->name('riwayat-absensi');
+    
+    // Routes baru
+    Route::get('/absensi/cek-status', [AbsensiController::class, 'cekStatusAbsen'])->name('cek-status-absen');
+    Route::get('/absensi/download-rekap', [AbsensiController::class, 'downloadRekap'])->name('download-rekap-absen');
+    
+    // Route untuk notifikasi
+    Route::post('/notifikasi/{id}/baca', function($id) {
+        DB::table('notifikasi')
+            ->where('id_notifikasi', $id)
+            ->update(['dibaca' => 1]);
+        return back()->with('success', 'Notifikasi ditandai telah dibaca');
+    })->name('notifikasi.baca');
+});
     // =================================================================
     // == KARYAWAN ROUTES
     // =================================================================
