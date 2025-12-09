@@ -6,28 +6,25 @@ use App\Http\Controllers\Controller;
 use App\Models\Absensi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB; // Tambahkan ini
-use Carbon\Carbon; // Tambahkan ini
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class AbsensiController extends Controller
 {
     // Tampilkan form absensi
     public function create()
     {
-        // Cek apakah sudah absen hari ini - LEBIH EFISIEN
         $absenHariIni = DB::table('absensi')
             ->where('id_user', Auth::id())
             ->whereDate('tanggal', Carbon::today())
             ->first();
 
-        // FITUR BARU: Dapatkan statistik bulan ini
         $bulanIni = Carbon::now()->format('Y-m');
         $statistikBulanIni = DB::table('v_rekap_absensi')
             ->where('id_user', Auth::id())
             ->where('bulan', $bulanIni)
             ->first();
 
-        // FITUR BARU: Cek apakah ada notifikasi terkait absensi
         $notifikasiAbsensi = DB::table('notifikasi')
             ->where('id_user', Auth::id())
             ->where('dibaca', 0)
@@ -37,7 +34,7 @@ class AbsensiController extends Controller
             ->get();
 
         return view('karyawan.absensi', compact(
-            'absenHariIni', 
+            'absenHariIni',
             'statistikBulanIni',
             'notifikasiAbsensi'
         ));
@@ -46,7 +43,6 @@ class AbsensiController extends Controller
     // Simpan data absensi - VERSI BARU DENGAN SP
     public function store(Request $request)
     {
-        // Validasi tetap sama
         $request->validate([
             'status_kehadiran' => 'required|in:Hadir,Izin,Sakit,Alpha,Libur_Agama',
             'jam_masuk' => 'required_if:status_kehadiran,Hadir|nullable|date_format:H:i',
@@ -54,7 +50,6 @@ class AbsensiController extends Controller
         ]);
 
         try {
-            // PANGGIL STORED PROCEDURE BARU! 🎯
             DB::statement('CALL sp_proses_absen(?, ?, ?, ?)', [
                 Auth::id(),
                 $request->status_kehadiran,
@@ -62,42 +57,43 @@ class AbsensiController extends Controller
                 $request->keterangan
             ]);
 
-            // Log tambahan di Laravel jika perlu
-            activity()
-                ->causedBy(Auth::user())
-                ->log('Melakukan absensi: ' . $request->status_kehadiran);
+            // INSERT ke tabel log_aktivitas (sesuai struktur DB kamu)
+            DB::table('log_aktivitas')->insert([
+                'id_user'     => Auth::id(),
+                'aksi'        => 'INPUT_ABSENSI', // lebih deskriptif
+                'tabel_terkait' => 'absensi',
+                'deskripsi'   => 'Melakukan absensi: ' . $request->status_kehadiran,
+                'ip_address'  => $request->ip(),
+                'waktu'       => now(), // kolom nama 'waktu' di dump SQL kamu
+            ]);
 
             return redirect()->route('karyawan.absensi')
-                            ->with('success', 'Absensi berhasil dicatat!');
-
+                             ->with('success', 'Absensi berhasil dicatat!');
         } catch (\Exception $e) {
-            // Tangkap error dari database (termasuk trigger error)
             $errorMessage = $e->getMessage();
-            
-            // User-friendly messages
+
             if (str_contains($errorMessage, 'User sudah absen hari ini')) {
                 return redirect()->back()->with('error', 'Anda sudah melakukan absensi hari ini.');
             }
-            
+
             return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $errorMessage);
         }
     }
 
-    // Riwayat absensi - VERSI LEBIH KAYA
+    // Riwayat absensi
     public function riwayat()
     {
         $riwayatAbsensi = DB::table('absensi')
-            ->select('absensi.*', 
-                // TAMBAHKAN FUNCTION DATABASE
+            ->select(
+                'absensi.*',
                 DB::raw('fn_cek_telat(jam_masuk) as status_telat'),
                 DB::raw('fn_hitung_menit_telat(jam_masuk) as menit_telat'),
                 DB::raw('DAYNAME(tanggal) as hari')
             )
             ->where('id_user', Auth::id())
             ->orderBy('tanggal', 'desc')
-            ->paginate(20); // Pagination untuk performa
+            ->paginate(20);
 
-        // FITUR BARU: Statistik keseluruhan
         $statistikTotal = DB::select("
             SELECT 
                 COUNT(*) as total_hari,
@@ -109,7 +105,6 @@ class AbsensiController extends Controller
             WHERE id_user = ?
         ", [Auth::id()]);
 
-        // FITUR BARU: Data untuk chart
         $chartData = DB::select("
             SELECT 
                 DATE_FORMAT(tanggal, '%Y-%m') as bulan,
@@ -123,27 +118,24 @@ class AbsensiController extends Controller
         ", [Auth::id()]);
 
         return view('karyawan.riwayat-absensi', compact(
-            'riwayatAbsensi', 
+            'riwayatAbsensi',
             'statistikTotal',
             'chartData'
         ));
     }
 
-    // FITUR BARU: Download rekap absensi
+    // Download rekap absensi
     public function downloadRekap()
     {
         $user = Auth::user();
         $bulan = request('bulan', Carbon::now()->format('m'));
         $tahun = request('tahun', Carbon::now()->format('Y'));
-        
-        // PANGGIL VIEW YANG SUDAH ADA
+
         $rekap = DB::table('v_rekap_absensi')
             ->where('id_user', $user->id)
             ->where('bulan', $tahun . '-' . str_pad($bulan, 2, '0', STR_PAD_LEFT))
             ->first();
 
-        // Generate PDF atau Excel (bisa menggunakan package)
-        // Contoh sederhana:
         $data = [
             'nama' => $user->nama_lengkap,
             'bulan' => $bulan,
@@ -151,15 +143,14 @@ class AbsensiController extends Controller
             'rekap' => $rekap
         ];
 
-        // Return view untuk PDF atau response JSON
         return response()->json($data);
     }
 
-    // FITUR BARU: Cek apakah bisa absen (untuk mobile API)
+    // API cek status absensi
     public function cekStatusAbsen()
     {
         $today = Carbon::today()->format('Y-m-d');
-        
+
         $absenHariIni = DB::table('absensi')
             ->where('id_user', Auth::id())
             ->whereDate('tanggal', $today)
@@ -170,10 +161,10 @@ class AbsensiController extends Controller
 
         return response()->json([
             'sudah_absen' => !!$absenHariIni,
-            'bisa_absen' => $bisaAbsen,
-            'data_absen' => $absenHariIni,
-            'jam_sekarang' => $jamSekarang,
-            'batas_absen' => '07:00' // Dari function database nanti
+            'bisa_absen'  => $bisaAbsen,
+            'data_absen'  => $absenHariIni,
+            'jam_sekarang'=> $jamSekarang,
+            'batas_absen' => '07:00'
         ]);
     }
 }

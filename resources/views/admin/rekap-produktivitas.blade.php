@@ -84,36 +84,7 @@
         </div>
 
         <!-- Statistik Utama -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div class="bg-white rounded-lg shadow p-4 text-center">
-                <div class="text-2xl font-bold text-blue-600">
-                    @if($total_berat_kg >= 1000)
-                        {{ number_format($total_berat_kg / 1000, 2) }} ton
-                    @else
-                        {{ number_format($total_berat_kg, 0) }} kg
-                    @endif
-                </div>
-                <div class="text-sm text-gray-600">Total Panen (Semua Status)</div>
-            </div>
-            <div class="bg-white rounded-lg shadow p-4 text-center">
-                <div class="text-2xl font-bold text-green-600">
-                    Rp {{ number_format($total_upah_keseluruhan, 0, ',', '.') }}
-                </div>
-                <div class="text-sm text-gray-600">Total Upah Dihitung</div>
-            </div>
-            <div class="bg-white rounded-lg shadow p-4 text-center">
-                <div class="text-2xl font-bold text-purple-600">
-                    {{ number_format($rata_per_panen_keseluruhan, 1) }} kg
-                </div>
-                <div class="text-sm text-gray-600">Rata-rata per Panen</div>
-            </div>
-            <div class="bg-white rounded-lg shadow p-4 text-center">
-                <div class="text-2xl font-bold text-orange-600">
-                    {{ $jumlah_karyawan_aktif }}
-                </div>
-                <div class="text-sm text-gray-600">Karyawan Aktif</div>
-            </div>
-        </div>
+      
 
         <!-- Dua Kolom Utama -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">

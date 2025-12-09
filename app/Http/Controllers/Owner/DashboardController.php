@@ -180,158 +180,155 @@ public function laporanKeuangan(Request $request)
         ]);
     }
 public function rekapProduktivitas(Request $request)
-    {
-        $start_date = $request->get('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
-        $end_date = $request->get('end_date', Carbon::now()->format('Y-m-d'));
+{
+    $start_date = $request->get('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
+    $end_date = $request->get('end_date', Carbon::now()->format('Y-m-d'));
 
-        // 1. PRODUKTIVITAS PER BLOK LADANG - TANPA FILTER STATUS
-        $produktivitas_per_blok = DB::table('panen_harian as ph')
-            ->join('blok_ladang as bl', 'ph.id_blok', '=', 'bl.id_blok')
-            ->select([
-                'bl.id_blok',
-                'bl.nama_blok',
-                DB::raw('COUNT(DISTINCT ph.tanggal) as total_panen'),
-                DB::raw('COALESCE(SUM(ph.jumlah_kg), 0) as total_berat'),
-                DB::raw('CASE 
-                    WHEN COUNT(DISTINCT ph.tanggal) > 0 
-                    THEN COALESCE(SUM(ph.jumlah_kg), 0) / COUNT(DISTINCT ph.tanggal)
-                    ELSE 0 
-                END as rata_per_panen'),
-                DB::raw('COALESCE(SUM(ph.total_upah), 0) as total_upah'),
-                DB::raw('CASE 
-                    WHEN COALESCE(SUM(ph.jumlah_kg), 0) > 0 
-                    THEN COALESCE(SUM(ph.total_upah), 0) / COALESCE(SUM(ph.jumlah_kg), 1)
-                    ELSE 0 
-                END as rata_upah_per_kg'),
-                // Tambahan: jenis buah yang dominan
-                DB::raw('(
-                    SELECT jenis_buah 
-                    FROM panen_harian ph2 
-                    WHERE ph2.id_blok = bl.id_blok 
-                        AND ph2.tanggal BETWEEN ? AND ?
-                    GROUP BY jenis_buah 
-                    ORDER BY SUM(jumlah_kg) DESC 
-                    LIMIT 1
-                ) as jenis_buah_dominan')
-            ])
-            ->addBinding($start_date, 'select')
-            ->addBinding($end_date, 'select')
-            ->whereBetween('ph.tanggal', [$start_date, $end_date])
-            ->groupBy('bl.id_blok', 'bl.nama_blok')
-            ->orderBy('total_berat', 'desc')
-            ->get();
+    // 1. PRODUKTIVITAS PER BLOK LADANG - TANPA FILTER STATUS
+    $produktivitas_per_blok = DB::table('panen_harian as ph')
+        ->join('blok_ladang as bl', 'ph.id_blok', '=', 'bl.id_blok')
+        ->select([
+            'bl.id_blok',
+            'bl.nama_blok',
+            DB::raw('COUNT(DISTINCT ph.tanggal) as total_panen'),
+            DB::raw('COALESCE(SUM(ph.jumlah_kg), 0) as total_berat'),
+            DB::raw('CASE 
+                WHEN COUNT(DISTINCT ph.tanggal) > 0 
+                THEN COALESCE(SUM(ph.jumlah_kg), 0) / COUNT(DISTINCT ph.tanggal)
+                ELSE 0 
+            END as rata_per_panen'),
+            DB::raw('COALESCE(SUM(ph.total_upah), 0) as total_upah'),
+            DB::raw('CASE 
+                WHEN COALESCE(SUM(ph.jumlah_kg), 0) > 0 
+                THEN COALESCE(SUM(ph.total_upah), 0) / COALESCE(SUM(ph.jumlah_kg), 1)
+                ELSE 0 
+            END as rata_upah_per_kg'),
+            // Tambahan: jenis buah yang dominan
+            DB::raw('(
+                SELECT jenis_buah 
+                FROM panen_harian ph2 
+                WHERE ph2.id_blok = bl.id_blok 
+                    AND ph2.tanggal BETWEEN ? AND ?
+                GROUP BY jenis_buah 
+                ORDER BY SUM(jumlah_kg) DESC 
+                LIMIT 1
+            ) as jenis_buah_dominan')
+        ])
+        ->addBinding($start_date, 'select')
+        ->addBinding($end_date, 'select')
+        ->whereBetween('ph.tanggal', [$start_date, $end_date])
+        ->groupBy('bl.id_blok', 'bl.nama_blok')
+        ->orderBy('total_berat', 'desc')
+        ->get();
 
-        // 2. PRODUKTIVITAS KARYAWAN - TANPA FILTER STATUS
-        $produktivitas_karyawan = DB::table('panen_harian as ph')
-            ->join('users as u', 'ph.id_user', '=', 'u.id_user')
-            ->select([
-                'u.id_user',
-                'u.nama_lengkap',
-                'u.role',
-                DB::raw('COUNT(DISTINCT ph.tanggal) as hari_kerja'),
-                DB::raw('COALESCE(SUM(ph.jumlah_kg), 0) as total_kg'),
-                DB::raw('COALESCE(SUM(ph.total_upah), 0) as total_upah'),
-                DB::raw('CASE 
-                    WHEN COUNT(DISTINCT ph.tanggal) > 0 
-                    THEN COALESCE(SUM(ph.jumlah_kg), 0) / COUNT(DISTINCT ph.tanggal)
-                    ELSE 0 
-                END as rata_perhari'),
-                DB::raw('CASE 
-                    WHEN COUNT(DISTINCT ph.tanggal) > 0 
-                    THEN COALESCE(SUM(ph.total_upah), 0) / COUNT(DISTINCT ph.tanggal)
-                    ELSE 0 
-                END as rata_upah_per_hari'),
-                // Tambahan: persentase buah segar vs gugur
-                DB::raw('ROUND(
-                    SUM(CASE WHEN ph.jenis_buah = "buah_segar" THEN ph.jumlah_kg ELSE 0 END) * 100.0 / 
-                    NULLIF(SUM(ph.jumlah_kg), 0), 
-                    1
-                ) as persentase_buah_segar')
-            ])
-            ->where('u.role', 'karyawan')
-            ->where('u.status_aktif', 1)
-            ->whereBetween('ph.tanggal', [$start_date, $end_date])
-            ->groupBy('u.id_user', 'u.nama_lengkap', 'u.role')
-            ->orderBy('total_kg', 'desc')
-            ->get();
+    // 2. PRODUKTIVITAS KARYAWAN - TANPA FILTER STATUS
+    $produktivitas_karyawan = DB::table('panen_harian as ph')
+        ->join('users as u', 'ph.id_user', '=', 'u.id_user')
+        ->select([
+            'u.id_user',
+            'u.nama_lengkap',
+            'u.role',
+            DB::raw('COUNT(DISTINCT ph.tanggal) as hari_kerja'),
+            DB::raw('COALESCE(SUM(ph.jumlah_kg), 0) as total_kg'),
+            DB::raw('COALESCE(SUM(ph.total_upah), 0) as total_upah'),
+            DB::raw('CASE 
+                WHEN COUNT(DISTINCT ph.tanggal) > 0 
+                THEN COALESCE(SUM(ph.jumlah_kg), 0) / COUNT(DISTINCT ph.tanggal)
+                ELSE 0 
+            END as rata_perhari'),
+            DB::raw('CASE 
+                WHEN COUNT(DISTINCT ph.tanggal) > 0 
+                THEN COALESCE(SUM(ph.total_upah), 0) / COUNT(DISTINCT ph.tanggal)
+                ELSE 0 
+            END as rata_upah_per_hari'),
+            // Tambahan: persentase buah segar vs gugur
+            DB::raw('ROUND(
+                SUM(CASE WHEN ph.jenis_buah = "buah_segar" THEN ph.jumlah_kg ELSE 0 END) * 100.0 / 
+                NULLIF(SUM(ph.jumlah_kg), 0), 
+                1
+            ) as persentase_buah_segar')
+        ])
+        ->where('u.role', 'karyawan')
+        ->where('u.status_aktif', 1)
+        ->whereBetween('ph.tanggal', [$start_date, $end_date])
+        ->groupBy('u.id_user', 'u.nama_lengkap', 'u.role')
+        ->orderBy('total_kg', 'desc')
+        ->get();
 
-        // 3. TOP PERFORMERS - Berdasarkan total panen tanpa filter status
-        $top_performers = DB::table('users as u')
-            ->leftJoin('panen_harian as ph', function($join) use ($start_date, $end_date) {
-                $join->on('u.id_user', '=', 'ph.id_user')
-                     ->whereBetween('ph.tanggal', [$start_date, $end_date]);
-            })
-            ->leftJoin('absensi as a', function($join) use ($start_date, $end_date) {
-                $join->on('u.id_user', '=', 'a.id_user')
-                     ->whereBetween('a.tanggal', [$start_date, $end_date]);
-            })
-            ->select([
-                'u.id_user',
-                'u.nama_lengkap',
-                'u.role',
-                DB::raw('COUNT(DISTINCT ph.id_panen) as total_panen_dilakukan'),
-                DB::raw('COUNT(DISTINCT a.id_absensi) as total_hari_absensi'),
-                DB::raw('SUM(CASE WHEN a.status_kehadiran = "Hadir" THEN 1 ELSE 0 END) as total_hadir'),
-                DB::raw('SUM(CASE WHEN a.status_kehadiran = "Alpha" THEN 1 ELSE 0 END) as total_alpha'),
-                DB::raw('COALESCE(SUM(ph.jumlah_kg), 0) as total_panen_kg'),
-                DB::raw('COALESCE(SUM(ph.total_upah), 0) as total_upah_didapat'),
-                DB::raw('COUNT(DISTINCT ph.tanggal) as hari_panen'),
-                // Hitung efisiensi (kg per hari panen)
-                DB::raw('CASE 
-                    WHEN COUNT(DISTINCT ph.tanggal) > 0 
-                    THEN COALESCE(SUM(ph.jumlah_kg), 0) / COUNT(DISTINCT ph.tanggal)
-                    ELSE 0 
-                END as efisiensi_kg_per_hari')
-            ])
-            ->where('u.role', 'karyawan')
-            ->where('u.status_aktif', 1)
-            ->groupBy('u.id_user', 'u.nama_lengkap', 'u.role')
-            ->orderBy('total_panen_kg', 'desc')
-            ->orderBy('efisiensi_kg_per_hari', 'desc')
-            ->limit(5)
-            ->get();
+    // 3. TOP PERFORMERS - Berdasarkan total hadir
+    $top_performers = DB::table('users as u')
+        ->leftJoin('absensi as a', function($join) use ($start_date, $end_date) {
+            $join->on('u.id_user', '=', 'a.id_user')
+                 ->whereBetween('a.tanggal', [$start_date, $end_date]);
+        })
+        ->select([
+            'u.id_user',
+            'u.nama_lengkap',
+            DB::raw('SUM(CASE WHEN a.status_kehadiran = "Hadir" THEN 1 ELSE 0 END) as total_hadir'),
+            DB::raw('SUM(CASE WHEN a.status_kehadiran = "Alpha" THEN 1 ELSE 0 END) as total_alpha'),
+            DB::raw('COUNT(DISTINCT a.id_absensi) as total_hari_absensi')
+        ])
+        ->where('u.role', 'karyawan')
+        ->where('u.status_aktif', 1)
+        ->groupBy('u.id_user', 'u.nama_lengkap')
+        ->orderBy('total_hadir', 'desc')   // Ranking berdasarkan hadir
+        ->orderBy('total_alpha', 'asc')
+        ->limit(5)
+        ->get();
 
-        // 4. STATISTIK KESELURUHAN - Semua data tanpa filter status
-        $total_berat_kg = $produktivitas_per_blok->sum('total_berat');
-        $total_upah_keseluruhan = $produktivitas_per_blok->sum('total_upah');
-        $rata_per_panen_keseluruhan = $produktivitas_per_blok->avg('rata_per_panen') ?? 0;
-        $jumlah_karyawan_aktif = $produktivitas_karyawan->count();
-        
-        // Hitung total buah segar vs gugur
-        $jenis_buah_stats = DB::table('panen_harian')
-            ->select([
-                DB::raw('SUM(CASE WHEN jenis_buah = "buah_segar" THEN jumlah_kg ELSE 0 END) as total_buah_segar'),
-                DB::raw('SUM(CASE WHEN jenis_buah = "buah_gugur" THEN jumlah_kg ELSE 0 END) as total_buah_gugur'),
-                DB::raw('COUNT(DISTINCT id_user) as jumlah_karyawan_total')
-            ])
-            ->whereBetween('tanggal', [$start_date, $end_date])
-            ->first();
-
-        // 5. DATA CHART
-        $chart_data = [
-            'labels' => $produktivitas_per_blok->pluck('nama_blok')->toArray(),
-            'berat' => $produktivitas_per_blok->pluck('total_berat')->toArray(),
-            'upah' => $produktivitas_per_blok->pluck('total_upah')->toArray(),
-            'jenis_buah' => [
-                'segar' => $jenis_buah_stats->total_buah_segar ?? 0,
-                'gugur' => $jenis_buah_stats->total_buah_gugur ?? 0
-            ]
-        ];
-
-        return view('owner.rekap-produktivitas', [
-            'produktivitas_per_blok' => $produktivitas_per_blok,
-            'produktivitas_karyawan' => $produktivitas_karyawan,
-            'top_performers' => $top_performers,
-            'chart_data' => $chart_data,
-            'start_date' => $start_date,
-            'end_date' => $end_date,
-            'total_berat_kg' => $total_berat_kg,
-            'total_upah_keseluruhan' => $total_upah_keseluruhan,
-            'rata_per_panen_keseluruhan' => $rata_per_panen_keseluruhan,
-            'jumlah_karyawan_aktif' => $jumlah_karyawan_aktif,
-            'jenis_buah_stats' => $jenis_buah_stats
-        ]);
+    // 4. TOTAL KARYAWAN AKTIF - MENGGUNAKAN STORED PROCEDURE
+    try {
+        $result = DB::select('CALL GetTotalKaryawanAktifAdmin()');
+        $jumlah_karyawan_aktif = $result[0]->total_karyawan;
+    } catch (\Exception $e) {
+        // Fallback ke query biasa jika stored procedure error
+        \Log::error('Error calling stored procedure: ' . $e->getMessage());
+        $jumlah_karyawan_aktif = DB::table('users')
+            ->where('role', 'karyawan')
+            ->where('status_aktif', 1)
+            ->count();
     }
+
+    // 5. STATISTIK KESELURUHAN
+    $total_berat_kg = $produktivitas_per_blok->sum('total_berat');
+    $total_upah_keseluruhan = $produktivitas_per_blok->sum('total_upah');
+    $rata_per_panen_keseluruhan = $produktivitas_per_blok->avg('rata_per_panen') ?? 0;
+    
+    // 6. Hitung total buah segar vs gugur
+    $jenis_buah_stats = DB::table('panen_harian')
+        ->select([
+            DB::raw('SUM(CASE WHEN jenis_buah = "buah_segar" THEN jumlah_kg ELSE 0 END) as total_buah_segar'),
+            DB::raw('SUM(CASE WHEN jenis_buah = "buah_gugur" THEN jumlah_kg ELSE 0 END) as total_buah_gugur'),
+            DB::raw('COUNT(DISTINCT id_user) as jumlah_karyawan_total')
+        ])
+        ->whereBetween('tanggal', [$start_date, $end_date])
+        ->first();
+
+    // 7. DATA CHART
+    $chart_data = [
+        'labels' => $produktivitas_per_blok->pluck('nama_blok')->toArray(),
+        'berat' => $produktivitas_per_blok->pluck('total_berat')->toArray(),
+        'upah' => $produktivitas_per_blok->pluck('total_upah')->toArray(),
+        'jenis_buah' => [
+            'segar' => $jenis_buah_stats->total_buah_segar ?? 0,
+            'gugur' => $jenis_buah_stats->total_buah_gugur ?? 0
+        ]
+    ];
+
+    return view('owner.rekap-produktivitas', [
+        'produktivitas_per_blok' => $produktivitas_per_blok,
+        'produktivitas_karyawan' => $produktivitas_karyawan,
+        'top_performers' => $top_performers,
+        'chart_data' => $chart_data,
+        'start_date' => $start_date,
+        'end_date' => $end_date,
+        'total_berat_kg' => $total_berat_kg,
+        'total_upah_keseluruhan' => $total_upah_keseluruhan,
+        'rata_per_panen_keseluruhan' => $rata_per_panen_keseluruhan,
+        'jumlah_karyawan_aktif' => $jumlah_karyawan_aktif,
+        'jenis_buah_stats' => $jenis_buah_stats
+    ]);
+}
 
     public function updateUserStatus(Request $request, $id)
     {
