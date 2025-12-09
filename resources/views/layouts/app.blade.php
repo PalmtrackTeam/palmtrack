@@ -52,10 +52,10 @@
     </main>
 
     <!-- Footer -->
-    <footer class="bg-gray-800 text-white py-8 mt-16">
-        <div class="max-w-6xl mx-auto px-6 text-center">
-            <p>&copy; {{ date('Y') }} PT Irfan Sawit Jaya. All rights reserved.</p>
-            <p class="mt-2 text-gray-400">Sistem Manajemen Perkebunan Kelapa Sawit</p>
+    <footer class="bg-gray-95 text-black py-4 mt-14">
+        <div class="max-w-4xl mx-auto px-4 text-center">
+             {{-- Footer --}}
+            @include('partials.footer')
         </div>
     </footer>
 
