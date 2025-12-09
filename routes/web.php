@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', fn() => view('home'))->name('home');
 Route::get('/home', fn() => view('home'))->name('home.page');
 
+Route::view('/tentang', 'tentang');
+Route::view('/kontak', 'kontak');
 
 // ==================== AUTH ROUTES ====================
 Route::get('/register', [RegisterController::class, 'showRegistrationForm'])->name('register');

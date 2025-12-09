@@ -51,14 +51,6 @@
         @yield('content')
     </main>
 
-    <!-- Footer -->
-    <footer class="bg-gray-95 text-black py-4 mt-14">
-        <div class="max-w-4xl mx-auto px-4 text-center">
-             {{-- Footer --}}
-            @include('partials.footer')
-        </div>
-    </footer>
-
     <!-- Flash Messages -->
     @if(session('success'))
         <div class="fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg">
