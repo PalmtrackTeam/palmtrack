@@ -54,64 +54,74 @@
         </ul>
         @endguest
 
-        {{-- =======================
-              NAVBAR AUTH
-        ======================== --}}
-        @auth
-        <ul class="flex items-center space-x-4">
+       {{-- =======================
+      NAVBAR AUTH
+======================= --}}
+@auth
+<ul class="flex items-center space-x-4">
 
-            <li x-data="{ open: false }" class="relative">
-                <!-- BUTTON DROPDOWN -->
-                <button 
-                    @click="open = !open"
-                    class="flex items-center bg-gray-600 text-white px-3 py-1.5 rounded-md font-semibold hover:bg-gray-500 focus:outline-none shadow-sm"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                              d="M12 12c2.21 0 4-1.79 4-4S14.21 4 12 4 8 5.79 8 8s1.79 4 4 4zm0 2c-3.31 0-6 2.69-6 6v1h12v-1c0-3.31-2.69-6-6-6z" />
-                    </svg>
-                    <span>{{ Auth::user()->nama_lengkap }}</span>
-                    <svg class="w-4 h-4 ml-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 9l6 6 6-6" />
-                    </svg>
+    <li x-data="{ open: false }" class="relative">
+        <!-- BUTTON DROPDOWN -->
+        <button 
+            @click="open = !open"
+            class="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-gray-100 transition"
+        >
+            <!-- CIRCLE AVATAR -->
+            <div class="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">
+                {{ strtoupper(substr(Auth::user()->nama_lengkap, 0, 1)) }}
+            </div>
+
+            <!-- NAME -->
+            <span class="font-medium text-gray-800">{{ Auth::user()->nama_lengkap }}</span>
+
+            <svg class="w-4 h-4 text-gray-700" xmlns="http://www.w3.org/2000/svg" fill="none"
+                viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 9l6 6 6-6" />
+            </svg>
+        </button>
+
+        <!-- DROPDOWN MENU -->
+        <div 
+            x-show="open"
+            @click.away="open = false"
+            x-transition
+            class="absolute right-0 mt-3 w-56 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden"
+        >
+
+            <!-- HEADER INFO -->
+            <div class="px-4 py-3 border-b">
+                <p class="font-semibold text-gray-900">
+                    {{ Auth::user()->nama_lengkap }}
+                </p>
+                <p class="text-sm text-gray-600">
+                    {{ Auth::user()->email }}
+                </p>
+                <p class="text-sm text-gray-500 mt-1">
+                    {{ Auth::user()->role ?? 'User' }}
+                </p>
+            </div>
+
+            <!-- PROFIL SAYA -->
+            <a href="{{ route('profile.info') }}" 
+               class="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm">
+                Profil Saya
+            </a>
+
+            <!-- LOGOUT -->
+            <form method="POST" action="{{ route('logout') }}">
+                @csrf
+                <button type="submit"
+                    class="w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100 text-sm font-medium">
+                    Keluar
                 </button>
+            </form>
 
-                <!-- DROPDOWN MENU -->
-                <ul 
-                    x-show="open"
-                    @click.away="open = false"
-                    x-transition
-                    class="absolute right-0 mt-2 w-44 bg-white text-black rounded-lg shadow-lg border border-gray-200"
-                >
-                    <li>
-                        <a href="{{ route('profile.info') }}" class="flex items-center gap-2 px-4 py-2 hover:bg-gray-100">
-                            <svg class="w-4 h-4 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 11c1.657 0 3-1.343 3-3V5a3 3 0 10-6 0v3c0 1.657 1.343 3 3 3z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M5 11h14v10H5z" />
-                            </svg>
-                            Info Profil
-                        </a>
-                    </li>
+        </div>
+    </li>
 
-                    <li>
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-                            <button type="submit"
-                                class="flex items-center gap-2 w-full text-left px-4 py-2 hover:bg-gray-100">
-                                <svg class="w-4 h-4 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1" />
-                                </svg>
-                                Logout
-                            </button>
-                        </form>
-                    </li>
-                </ul>
-            </li>
+</ul>
+@endauth
 
-        </ul>
-        @endauth
     </nav>
 
 
