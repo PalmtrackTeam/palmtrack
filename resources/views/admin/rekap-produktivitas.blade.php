@@ -19,8 +19,9 @@
     </style>
 </head>
 <body class="bg-gray-50">
+      @include('layouts.app') 
     <!-- Navigation -->
-    <nav class="bg-role-primary text-white shadow-lg no-print">
+    <!-- <nav class="bg-role-primary text-white shadow-lg no-print">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
@@ -45,7 +46,7 @@
                 </div>
             </div>
         </div>
-    </nav>
+    </nav> -->
 
     <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <!-- Header -->

@@ -9,11 +9,13 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 </head>
 <body>
+    @include('layouts.app') 
+    
     <div class="container-fluid py-4">
         <div class="row">
             <div class="col-12">
                 <div class="card shadow">
-                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                         <h4 class="mb-0">Riwayat Pemasukan</h4>
                     </div>
                     <div class="card-body">

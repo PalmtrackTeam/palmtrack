@@ -14,6 +14,7 @@
 
 <body class="bg-white">
 
+
     {{-- ============================
             NAVIGATION BAR BARU
        ============================ --}}
@@ -26,7 +27,6 @@
                  class="w-8 h-8 object-contain">
             <h1 class="font-bold text-lg">PT Irfan Sawit Jaya</h1>
         </div>
-
         {{-- =======================
               NAVBAR GUEST
         ======================== --}}
@@ -53,7 +53,6 @@
             </li>
         </ul>
         @endguest
-
 
         {{-- =======================
               NAVBAR AUTH

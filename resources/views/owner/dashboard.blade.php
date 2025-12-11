@@ -13,14 +13,14 @@
             </div>
             <div class="flex space-x-3">
                 <!-- Quick Navigation Buttons -->
-                <a href="{{ route('owner.laporan-keuangan') }}" 
+                <!-- <a href="{{ route('owner.laporan-keuangan') }}" 
                    class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center">
                     <i class="fas fa-chart-line mr-2"></i>Laporan Keuangan
                 </a>
                 <a href="{{ route('owner.manajemen-user') }}"
                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center">
                     <i class="fas fa-users mr-2"></i>Manajemen User
-                </a>
+                </a> -->
             </div>
         </div>
 

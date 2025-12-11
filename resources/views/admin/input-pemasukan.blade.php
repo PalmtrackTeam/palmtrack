@@ -13,7 +13,18 @@
     </style>
 </head>
 <body class="bg-gray-50">
-    <nav class="bg-green-800 text-white shadow-lg">
+      @include('layouts.app') 
+
+    <div class="max-w-7xl mx-auto px-4 mt-4">
+        <div class="flex justify-end">
+            <a href="{{ route('admin.riwayat-pemasukan') }}" 
+            class="bg-green-600 hover:bg-green-500 px-3 py-1 rounded text-white transition-colors">
+                <i class="fas fa-history mr-1"></i> Riwayat
+            </a>
+        </div>
+    </div>
+
+    <!-- <nav class="bg-green-800 text-white shadow-lg">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
@@ -31,7 +42,7 @@
                 </div>
             </div>
         </div>
-    </nav>
+    </nav> -->
 
     <div class="max-w-2xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <div class="bg-white rounded-xl card-shadow p-6">
