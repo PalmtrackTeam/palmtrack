@@ -17,7 +17,8 @@ class ProfileController extends Controller
 
     public function info()
     {
-        $user = Auth::user();
+        // $user = Auth::user();
+        $user = auth()->user(); 
         return view('profile-info', compact('user'));
     }
 
@@ -35,9 +36,9 @@ class ProfileController extends Controller
     {
         $request->user()->fill($request->validated());
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
-        }
+        // if ($request->user()->isDirty('email')) {
+        //     $request->user()->email_verified_at = null;
+        // }
 
         $request->user()->save();
 

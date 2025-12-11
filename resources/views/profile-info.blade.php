@@ -9,13 +9,13 @@
   </div>
 
   <div class="px-8 py-8 space-y-6">
-    <div>
+     <div>
       <p class="text-sm text-gray-500 uppercase tracking-wide mb-1">Nama</p>
       <p class="text-gray-800 font-medium border border-gray-200 rounded-lg px-4 py-2 bg-gray-50">
-        {{ $user->name }}
+        {{ $user->username }}
       </p>
     </div>
-
+    
     <div>
       <p class="text-sm text-gray-500 uppercase tracking-wide mb-1">Email</p>
       <p class="text-gray-800 font-medium border border-gray-200 rounded-lg px-4 py-2 bg-gray-50">

@@ -16,41 +16,16 @@
     </style>
 </head>
 <body class="bg-gray-50">
-    <div class="min-h-screen">
-        <!-- Navigation -->
-        <nav class="bg-green-800 text-white shadow-lg">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between h-16">
-                    <div class="flex items-center">
-                        <i class="fas fa-tractor text-xl mr-3"></i>
-                        <span class="font-semibold text-xl">Sawit Management</span>
-                    </div>
-                    <div class="flex items-center space-x-4">
-                        <span class="text-green-200">Mandor</span>
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-                            <button type="submit" class="bg-green-700 hover:bg-green-600 px-3 py-1 rounded transition-colors">
-                                <i class="fas fa-sign-out-alt mr-1"></i>Logout
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </nav>
+     @include('layouts.app')
 
-        <!-- Sidebar & Main Content -->
+       <!-- Sidebar & Main Content -->
         <div class="flex">
             <!-- Sidebar -->
             <div class="w-64 bg-white min-h-screen card-shadow">
                 <div class="p-4 border-b">
                     <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-semibold">
-                            {{ strtoupper(substr(auth()->user()->nama_lengkap, 0, 1)) }}
-                        </div>
-                        <div>
-                            <div class="font-semibold text-gray-800">{{ auth()->user()->nama_lengkap }}</div>
-                            <div class="text-sm text-gray-600 capitalize">{{ auth()->user()->jabatan }}</div>
-                        </div>
+                        <i class="fas fa-tractor text-xl text-gray-600"></i>
+                        <span class="font-semibold text-gray-800 text-lg">Sawit Management</span>
                     </div>
                 </div>
                 

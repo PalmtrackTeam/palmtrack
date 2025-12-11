@@ -3,15 +3,13 @@
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\DashboardController;
-
 use App\Http\Controllers\Owner\DashboardController as OwnerDashboardController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Karyawan\DashboardController as KaryawanDashboardController;
-
 use App\Http\Controllers\Admin\InputPanenController;
 use App\Http\Controllers\Karyawan\AbsensiController;
-
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ProfileController;
 
 // ==================== PUBLIC ROUTES ====================
 Route::get('/', fn() => view('home'))->name('home');
@@ -20,6 +18,20 @@ Route::get('/home', fn() => view('home'))->name('home.page');
 Route::view('/tentang', 'tentang');
 Route::view('/kontak', 'kontak');
 
+Route::middleware('auth')->group(function () {
+    // Lihat info profil
+    Route::get('/profile/info', [ProfileController::class, 'info'])->name('profile.info');
+
+    // Edit profil
+    Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
+
+    // Update profil
+    Route::patch('/profile/update', [ProfileController::class, 'update'])->name('profile.update');
+
+    // Hapus akun
+    Route::delete('/profile/destroy', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
+
 // ==================== AUTH ROUTES ====================
 Route::get('/register', [RegisterController::class, 'showRegistrationForm'])->name('register');
 Route::post('/register', [RegisterController::class, 'register']);
@@ -27,7 +39,6 @@ Route::post('/register', [RegisterController::class, 'register']);
 Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
 Route::post('/login', [AuthenticatedSessionController::class, 'store']);
 Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
-
 
 // ==================== PROTECTED ROUTES ====================
 Route::middleware(['auth'])->group(function () {
