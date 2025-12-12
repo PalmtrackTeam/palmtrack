@@ -11,11 +11,13 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+
         // Register custom middleware
         $middleware->alias([
             'owner' => \App\Http\Middleware\OwnerMiddleware::class,
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
             'karyawan' => \App\Http\Middleware\KaryawanMiddleware::class,
+            'DBDynamicConnection' => \App\Http\Middleware\DBDynamicConnection::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

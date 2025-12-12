@@ -63,6 +63,32 @@ return [
             ]) : [],
         ],
 
+        'mysql_owner' => [
+            'driver' => 'mysql',
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '3306'),
+            'database' => env('DB_DATABASE_OWNER', 'sawit_db'),
+            'username' => env('DB_USERNAME_OWNER', 'owner'),
+            'password' => env('DB_PASSWORD_OWNER', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+        ],
+
+        'mysql_admin' => [
+            'driver' => 'mysql',
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '3306'),
+            'database' => env('DB_DATABASE_MANDOR', 'sawit_db'),
+            'username' => env('DB_USERNAME_MANDOR', 'mandor'),
+            'password' => env('DB_PASSWORD_MANDOR', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+        ],
+
         'mariadb' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),

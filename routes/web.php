@@ -210,5 +210,17 @@ Route::middleware(['auth'])->prefix('karyawan')->name('karyawan.')->group(functi
 
 });
 
+Route::get('/check-connection', function () {
+    $connection = DB::connection()->getName();
+    $user = Auth::user();
+
+    return response()->json([
+        'logged_in_as' => $user->username ?? 'guest',
+        'role' => $user->role ?? 'none',
+        'using_connection' => $connection,
+    ]);
+// })->middleware(['auth']);
+})->middleware(['auth','DBDynamicConnection']);
+
 require __DIR__.'/auth.php';
 
