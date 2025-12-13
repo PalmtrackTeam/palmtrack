@@ -661,7 +661,187 @@ public function storePemasukan(Request $request)
         ], 500);
     }
 }
+public function panenManagement(Request $request)
+{
+    // Default periode: bulan ini
+    $startDate = $request->get('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
+    $endDate = $request->get('end_date', Carbon::now()->endOfMonth()->format('Y-m-d'));
+    
+    // Tab aktif
+    $activeTab = $request->get('tab', 'verifikasi'); // default: verifikasi
 
+    // DATA PANEN MENUNGGU VERIFIKASI
+    $panenPerluVerifikasi = PanenHarian::with(['user', 'blokLadang'])
+        ->where('status_panen', 'draft')
+        ->orderBy('tanggal', 'desc')
+        ->orderBy('id_panen', 'desc')
+        ->get();
+
+    // DATA PANEN SUDAH DIVERIFIKASI (berdasarkan filter tanggal)
+    $panenTerverifikasi = PanenHarian::with(['user', 'blokLadang', 'verifikator'])
+        ->where('status_panen', 'diverifikasi')
+        ->whereBetween('tanggal', [$startDate, $endDate])
+        ->orderBy('tanggal', 'desc')
+        ->orderBy('id_panen', 'desc')
+        ->get();
+
+    // STATISTIK VERIFIKASI
+    $statsVerifikasi = [
+        'total_menunggu' => $panenPerluVerifikasi->count(),
+        'total_berat_menunggu' => $panenPerluVerifikasi->sum('jumlah_kg'),
+        'total_upah_menunggu' => $panenPerluVerifikasi->sum('total_upah'),
+        'karyawan_terlibat' => $panenPerluVerifikasi->unique('id_user')->count(),
+    ];
+
+    // STATISTIK LAPORAN (periode terfilter)
+    $statsLaporan = [
+        'total_panen' => $panenTerverifikasi->count(),
+        'total_berat_kg' => $panenTerverifikasi->sum('jumlah_kg'),
+        'total_upah' => $panenTerverifikasi->sum('total_upah'),
+        'rata_per_panen' => $panenTerverifikasi->avg('jumlah_kg') ?? 0,
+        'buah_segar' => $panenTerverifikasi->where('jenis_buah', 'buah_segar')->sum('jumlah_kg'),
+        'buah_gugur' => $panenTerverifikasi->where('jenis_buah', 'buah_gugur')->sum('jumlah_kg'),
+        'jumlah_karyawan' => $panenTerverifikasi->unique('id_user')->count(),
+    ];
+
+    // DATA CHART untuk laporan
+    $panenPerBulan = PanenHarian::select([
+            DB::raw('MONTH(tanggal) as bulan'),
+            DB::raw('YEAR(tanggal) as tahun'),
+            DB::raw('SUM(jumlah_kg) as total_berat'),
+            DB::raw('SUM(total_upah) as total_upah'),
+            DB::raw('COUNT(*) as jumlah_panen')
+        ])
+        ->where('status_panen', 'diverifikasi')
+        ->whereBetween('tanggal', [$startDate, $endDate])
+        ->groupBy('tahun', 'bulan')
+        ->orderBy('tahun', 'asc')
+        ->orderBy('bulan', 'asc')
+        ->get();
+
+    $chartData = [
+        'labels' => $panenPerBulan->map(function($item) {
+            return Carbon::createFromDate($item->tahun, $item->bulan, 1)->format('M Y');
+        })->toArray(),
+        'berat' => $panenPerBulan->pluck('total_berat')->toArray(),
+        'upah' => $panenPerBulan->pluck('total_upah')->toArray(),
+    ];
+
+    return view('owner.panen-management', [
+        // Data
+        'panen_perlu_verifikasi' => $panenPerluVerifikasi,
+        'panen_terverifikasi' => $panenTerverifikasi,
+        
+        // Stats
+        'stats_verifikasi' => $statsVerifikasi,
+        'stats_laporan' => $statsLaporan,
+        'chart_data' => $chartData,
+        
+        // Filter & Tab
+        'start_date' => $startDate,
+        'end_date' => $endDate,
+        'active_tab' => $activeTab,
+        
+        // Summary untuk dashboard
+        'panen_menunggu_count' => $statsVerifikasi['total_menunggu']
+    ]);
+}
+
+public function verifyPanen(Request $request, $id)
+{
+    try {
+        $panen = PanenHarian::with(['user', 'blokLadang'])->findOrFail($id);
+
+        $request->validate([
+            'action' => 'required|in:approve,reject',
+            'catatan_verifikasi' => 'nullable|string|max:500'
+        ]);
+
+        DB::beginTransaction();
+
+        if ($request->action === 'approve') {
+            // =========================
+            // APPROVE (VERIFIKASI)
+            // =========================
+            $panen->update([
+                'status_panen' => 'diverifikasi',
+                'keterangan' => ($panen->keterangan ? $panen->keterangan . ' | ' : '') .
+                    'Terverifikasi: ' . ($request->catatan_verifikasi ?: 'Panen sesuai standar') .
+                    ' - ' . now()->format('d/m/Y H:i')
+            ]);
+
+            // Buat pemasukan otomatis jika buah segar
+            if ($panen->jenis_buah === 'buah_segar') {
+                $this->createPemasukanFromPanen($panen);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Panen berhasil diverifikasi',
+                'redirect' => route('owner.panen-management', ['tab' => 'laporan'])
+            ]);
+
+        } else {
+            // =========================
+            // REJECT (LANGSUNG HAPUS)
+            // =========================
+
+            // Log ke file saja (opsional, aman)
+            \Log::info('Panen ditolak dan dihapus', [
+                'id_panen' => $panen->id_panen,
+                'tanggal' => $panen->tanggal,
+                'karyawan' => $panen->user->nama_lengkap ?? '-',
+                'blok' => $panen->blokLadang->nama_blok ?? '-',
+                'jumlah_kg' => $panen->jumlah_kg,
+                'jenis_buah' => $panen->jenis_buah,
+                'catatan' => $request->catatan_verifikasi
+            ]);
+
+            // HAPUS DATA PANEN
+            $panen->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Panen ditolak dan berhasil dihapus dari sistem'
+            ]);
+        }
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        \Log::error('Error verify panen: ' . $e->getMessage());
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Gagal memverifikasi panen: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+private function createPemasukanFromPanen(PanenHarian $panen)
+{
+    // Harga jual buah sawit per kg (sesuaikan dengan harga pasar)
+    $hargaJualPerKg = 2500; // Contoh: Rp 2.500/kg
+    
+    try {
+        Pemasukan::create([
+            'tanggal' => $panen->tanggal,
+            'sumber_pemasukan' => 'penjualan_buah',
+            'total_pemasukan' => $panen->jumlah_kg * $hargaJualPerKg,
+            'keterangan' => 'Penjualan buah segar dari panen ID ' . $panen->id_panen . 
+                           ' - Blok: ' . $panen->blokLadang->nama_blok . 
+                           ' - Petani: ' . $panen->user->nama_lengkap,
+            'id_user_pencatat' => auth()->id(),
+            'status_verifikasi' => true,
+            'created_at' => now()
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Gagal membuat pemasukan dari panen: ' . $e->getMessage());
+    }
+}
 public function verifikasiPengeluaran()
 {
     $pengeluaranPerluVerifikasi = Pengeluaran::with(['pencatat', 'pupuk', 'transportasi', 'perawatan'])

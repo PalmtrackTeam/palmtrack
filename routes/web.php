@@ -56,7 +56,11 @@ Route::middleware(['auth'])->group(function () {
 
         // Rekap Produktivitas
         Route::get('/rekap-produktivitas', [OwnerDashboardController::class, 'rekapProduktivitas'])->name('rekap-produktivitas');
-
+Route::get('/panen-management', [OwnerDashboardController::class, 'panenManagement'])
+    ->name('panen-management');
+Route::post('/verifikasi-panen/{id}/verify',
+    [OwnerDashboardController::class, 'verifyPanen']
+)->name('verifikasi-panen.verify');
         // Laporan Keuangan
         Route::get('/laporan-keuangan', [OwnerDashboardController::class, 'laporanKeuangan'])->name('laporan-keuangan');
 

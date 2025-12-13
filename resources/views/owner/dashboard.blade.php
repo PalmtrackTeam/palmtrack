@@ -31,6 +31,18 @@
                    class="pb-4 px-2 border-b-2 border-blue-500 text-blue-600 font-semibold flex items-center">
                     <i class="fas fa-home mr-2"></i>Dashboard
                 </a>
+                 <a href="{{ route('owner.panen-management', ['tab' => 'verifikasi']) }}" 
+           class="pb-4 px-2 text-gray-500 hover:text-gray-700 font-medium flex items-center relative">
+            <i class="fas fa-clipboard-check mr-2"></i>Manajemen Panen
+            @php
+                $panenMenungguCount = \App\Models\PanenHarian::where('status_panen', 'draft')->count();
+            @endphp
+            @if($panenMenungguCount > 0)
+            <span class="ml-1 bg-red-500 text-white text-xs rounded-full px-2 py-1 animate-pulse">
+                {{ $panenMenungguCount }}
+            </span>
+            @endif
+        </a>
                 <a href="{{ route('owner.laporan-keuangan') }}" 
                    class="pb-4 px-2 text-gray-500 hover:text-gray-700 font-medium flex items-center">
                     <i class="fas fa-file-invoice-dollar mr-2"></i>Laporan Keuangan
