@@ -2,11 +2,12 @@
 
 namespace App\Models;
 
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     use HasFactory, Notifiable;
 
@@ -14,23 +15,24 @@ class User extends Authenticatable
     protected $primaryKey = 'id_user';
 
     protected $fillable = [
-    'username',
-    'nama_lengkap',
-    'email',
-    'password',
-    'role',
-    'status_aktif',
-    'no_telepon',
-    'alamat',
-    'id_blok',  // <= WAJIB ADA
-    'tanggal_bergabung',
-    'bisa_input_panen',
-    'bisa_input_absen',
-];
-
+        'username',
+        'nama_lengkap',
+        'email',
+        'password',
+        'role',
+        'status_aktif',
+        'no_telepon',
+        'alamat',
+        'id_blok',
+        'tanggal_bergabung',
+        'bisa_input_panen',
+        'bisa_input_absen',
+        // 'email_verified_at', // opsional (umumnya tidak perlu dimasukkan)
+    ];
 
     protected $hidden = [
         'password',
+        // 'remember_token', // tambahkan kalau kolomnya ada di tabel
     ];
 
     protected $casts = [
@@ -38,21 +40,19 @@ class User extends Authenticatable
         'bisa_input_panen' => 'boolean',
         'bisa_input_absen' => 'boolean',
         'tanggal_bergabung' => 'date',
+        'email_verified_at' => 'datetime', // penting untuk fitur verifikasi email
     ];
 
-    // Method untuk authentication dengan username
     public function username()
     {
         return 'username';
     }
 
-    // Method untuk password reset dengan email
     public function getEmailForPasswordReset()
     {
         return $this->email;
     }
 
-    // Untuk notifikasi
     public function routeNotificationFor($driver)
     {
         if ($driver === 'mail') {
@@ -70,17 +70,6 @@ class User extends Authenticatable
         return $this->role === 'admin';
     }
 
-    // Tambahkan relasi untuk gaji
-public function gaji()
-{
-    return $this->hasMany(PengeluaranGaji::class, 'id_user', 'id_user');
-}
-
-// Untuk relasi sebagai karyawan di pengeluaran gaji
-public function karyawan()
-{
-    return $this->hasMany(PengeluaranGaji::class, 'id_user', 'id_user');
-}
     public function isKaryawan()
     {
         return $this->role === 'karyawan';
@@ -91,14 +80,23 @@ public function karyawan()
         return $this->status_aktif === true;
     }
 
+    public function gaji()
+    {
+        return $this->hasMany(PengeluaranGaji::class, 'id_user', 'id_user');
+    }
+
+    public function karyawan()
+    {
+        return $this->hasMany(PengeluaranGaji::class, 'id_user', 'id_user');
+    }
+
     public function laporanMasalah()
-{
-    return $this->hasMany(LaporanMasalah::class, 'id_user');
-}
+    {
+        return $this->hasMany(LaporanMasalah::class, 'id_user');
+    }
 
-public function laporanDitangani()
-{
-    return $this->hasMany(LaporanMasalah::class, 'ditangani_oleh');
-}
-
+    public function laporanDitangani()
+    {
+        return $this->hasMany(LaporanMasalah::class, 'ditangani_oleh');
+    }
 }
