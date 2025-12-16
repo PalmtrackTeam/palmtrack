@@ -27,7 +27,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'tanggal_bergabung',
         'bisa_input_panen',
         'bisa_input_absen',
-        // 'email_verified_at', // opsional (umumnya tidak perlu dimasukkan)
+        'email_verified_at', // opsional (umumnya tidak perlu dimasukkan)
     ];
 
     protected $hidden = [

@@ -28,7 +28,6 @@ Route::get('/home', function () {
     return view('home');
 })->middleware(['auth', 'verified'])->name('home');
 
-
 // ==================== PROFILE ROUTES (cukup login saja) ====================
 Route::middleware('auth')->group(function () {
     Route::get('/profile/info', [ProfileController::class, 'info'])->name('profile.info');
@@ -121,10 +120,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/kelola-absensi/{id}', [AdminDashboardController::class, 'updateAbsensi'])->name('absensi.update');
         Route::delete('/kelola-absensi/{id}', [AdminDashboardController::class, 'deleteAbsensi'])->name('absensi.delete');
 
-        // Laporan Masalah
-        Route::get('/laporan-masalah', [AdminDashboardController::class, 'laporanMasalah'])->name('laporan-masalah');
-        Route::post('/laporan-masalah/{id}/teruskan-owner', [AdminDashboardController::class, 'teruskanKeOwner'])->name('teruskan-owner');
-        Route::post('/laporan-masalah/{id}/tangani', [AdminDashboardController::class, 'tanganiMasalah'])->name('tangani-masalah');
+        // // // Laporan Masalah
+        // Route::get('/laporan-masalah', [AdminDashboardController::class, 'laporanMasalah'])->name('laporan-masalah');
+        // Route::post('/laporan-masalah/{id}/teruskan-owner', [AdminDashboardController::class, 'teruskanKeOwner'])->name('teruskan-owner');
+        // Route::post('/laporan-masalah/{id}/tangani', [AdminDashboardController::class, 'tanganiMasalah'])->name('tangani-masalah');
+        // // Simpan laporan masalah
+        // Route::post('/laporan-masalah', [AdminDashboardController::class, 'storeLaporanMasalah'])
+        // ->name('laporan-masalah.store');
+        // // Form Input Laporan Masalah
+        // Route::get('/input-laporan-masalah', [AdminDashboardController::class, 'inputLaporanMasalah'])
+        // ->name('input-laporan-masalah'); // untuk menampilkan form
+
+        // Form Input Laporan Masalah admin
+        Route::get('/input-laporan-masalah', [AdminDashboardController::class, 'inputLaporanMasalah'])
+            ->name('input-laporan-masalah');
+
+        // Simpan laporan masalah
+        Route::post('/laporan-masalah', [AdminDashboardController::class, 'storeLaporanMasalah'])
+            ->name('laporan-masalah.store');
+
+        // Laporan Masalah (list)
+        Route::get('/laporan-masalah', [AdminDashboardController::class, 'laporanMasalah'])
+            ->name('laporan-masalah');
 
         // Pemasukan
         Route::get('/input-pemasukan', [AdminDashboardController::class, 'inputPemasukan'])->name('input-pemasukan');
