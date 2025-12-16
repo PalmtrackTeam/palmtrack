@@ -20,6 +20,15 @@ Route::get('/home', fn () => view('home'))->name('home.page');
 Route::view('/tentang', 'tentang');
 Route::view('/kontak', 'kontak');
 
+Route::get('/email/verify', function () {
+    return view('auth.verify-email');
+})->middleware('auth')->name('verification.notice');
+
+Route::get('/home', function () {
+    return view('home');
+})->middleware(['auth', 'verified'])->name('home');
+
+
 // ==================== PROFILE ROUTES (cukup login saja) ====================
 Route::middleware('auth')->group(function () {
     Route::get('/profile/info', [ProfileController::class, 'info'])->name('profile.info');
