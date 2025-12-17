@@ -1,29 +1,28 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <title>Verify Email</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
-<body class="min-h-screen flex items-center justify-center bg-white dark:bg-black px-4">
+<body class="min-h-screen bg-gray-50 flex items-center justify-center px-4">
 
-    <div class="w-full max-w-md border border-gray-200 dark:border-gray-800 rounded-xl p-8 shadow-lg">
+    <div class="w-full max-w-md bg-white shadow-md rounded-2xl px-10 py-8 border border-gray-200">
 
-        <h1 class="text-2xl font-semibold text-center text-black dark:text-white mb-4">
+        <h1 class="text-2xl font-bold text-center text-gray-800 mb-2">
             Verifikasi Email
         </h1>
 
-        <p class="text-sm text-center text-gray-700 dark:text-gray-300 mb-4">
-            Thanks for signing up! Before getting started, please verify your email
-            address by clicking the link we just sent to your email.
+        <p class="text-sm text-center text-gray-600 mb-6">
+            Terima kasih telah mendaftar. Sebelum melanjutkan, silakan verifikasi
+            alamat email Anda dengan mengklik tautan yang telah kami kirimkan
+            ke email Anda.
         </p>
 
         @if (session('status') == 'verification-link-sent')
-            <div class="mb-4 text-sm text-center bg-gray-100 dark:bg-gray-900
-                        text-black dark:text-white border border-gray-300 dark:border-gray-700
-                        rounded-lg px-4 py-3">
-                A new verification link has been sent to your email address.
+            <div class="mb-4 p-3 bg-green-100 border border-green-300 text-green-700 rounded-lg text-sm text-center">
+                Link verifikasi baru telah dikirim ke alamat email Anda.
             </div>
         @endif
 
@@ -32,18 +31,16 @@
             <form method="POST" action="{{ route('verification.send') }}">
                 @csrf
                 <button
-                    class="w-full py-2 rounded-lg bg-black text-white
-                           hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200">
-                    Resend Verification Email
+                    class="w-full bg-gray-800 text-white py-2 rounded-lg hover:bg-gray-700 transition font-medium shadow-sm">
+                    Kirim Ulang Email Verifikasi
                 </button>
             </form>
 
             <form method="POST" action="{{ route('logout') }}" class="text-center">
                 @csrf
                 <button type="submit"
-                        class="text-sm underline text-gray-600 dark:text-gray-400
-                               hover:text-black dark:hover:text-white">
-                    Log Out
+                        class="text-sm text-gray-500 hover:text-gray-700 underline">
+                    Logout
                 </button>
             </form>
 
