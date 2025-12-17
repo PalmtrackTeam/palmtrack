@@ -25,13 +25,15 @@ class AbsensiController extends Controller
             ->where('bulan', $bulanIni)
             ->first();
 
-        $notifikasiAbsensi = DB::table('notifikasi')
-            ->where('id_user', Auth::id())
-            ->where('dibaca', 0)
-            ->where('judul', 'like', '%Absensi%')
-            ->orderBy('created_at', 'desc')
-            ->limit(3)
-            ->get();
+        // $notifikasiAbsensi = DB::table('notifikasi')
+        //     ->where('id_user', Auth::id())
+        //     ->where('dibaca', 0)
+        //     ->where('judul', 'like', '%Absensi%')
+        //     ->orderBy('created_at', 'desc')
+        //     ->limit(3)
+        //     ->get();
+
+        $notifikasiAbsensi = collect(); // kosong, aman
 
         return view('karyawan.absensi', compact(
             'absenHariIni',
