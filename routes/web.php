@@ -20,6 +20,7 @@ Route::get('/home', fn () => view('home'))->name('home.page');
 Route::view('/tentang', 'tentang');
 Route::view('/kontak', 'kontak');
 
+<<<<<<< HEAD
 Route::get('/email/verify', function () {
     return view('auth.verify-email');
 })->middleware('auth')->name('verification.notice');
@@ -27,6 +28,14 @@ Route::get('/email/verify', function () {
 Route::get('/home', function () {
     return view('home');
 })->middleware(['auth', 'verified'])->name('home');
+=======
+// PWA Manifest
+// Route::get('/manifest.json', function () {
+//     return response()->file(public_path('manifest.json'), [
+//         'Content-Type' => 'application/manifest+json'
+//     ]);
+// })->name('pwa.manifest');
+>>>>>>> 67b3f0f (Menambahkan Progressive Web App)
 
 // ==================== PROFILE ROUTES (cukup login saja) ====================
 Route::middleware('auth')->group(function () {
