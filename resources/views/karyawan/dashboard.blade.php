@@ -204,14 +204,7 @@
                             {{ \Carbon\Carbon::parse($laporan->tanggal)->translatedFormat('d F Y') }}
                         </div>
                     </div>
-
-                    @if($laporan->tindakan)
-                        <button onclick="showLaporanDetail({{ $laporan->id_masalah }})"
-                                class="text-blue-600 hover:text-blue-800 text-sm">
-                            Lihat →
-                        </button>
-                    @endif
-
+                    
                 </div>
 
             @endforeach

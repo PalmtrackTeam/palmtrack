@@ -25,37 +25,6 @@
     </div>
     @endif
 
-    <!-- STATISTIK BULAN INI (FITUR BARU) -->
-   @if(isset($statistikBulanIni))
-    <div class="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
-        <h3 class="font-bold text-blue-800 mb-3 flex items-center">
-            📊 Statistik Absensi Bulan Ini
-        </h3>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div class="text-center">
-                <div class="text-2xl font-bold text-blue-600">{{ $statistikBulanIni->hadir ?? 0 }}</div>
-                <div class="text-sm text-gray-600">Hari Hadir</div>
-            </div>
-            <div class="text-center">
-                <div class="text-2xl font-bold text-green-600">{{ $statistikBulanIni->persen_hadir ?? 0 }}%</div>
-                <div class="text-sm text-gray-600">Kehadiran</div>
-            </div>
-            <div class="text-center">
-                <div class="text-2xl font-bold text-{{ ($statistikBulanIni->rata_rata_telat_menit ?? 0) > 10 ? 'red' : 'green' }}-600">
-                    {{ round($statistikBulanIni->rata_rata_telat_menit ?? 0) }}
-                </div>
-                <div class="text-sm text-gray-600">Rata² Telat (mnt)</div>
-            </div>
-            <div class="text-center">
-                <div class="text-2xl font-bold text-{{ ($statistikBulanIni->jumlah_telat ?? 0) > 3 ? 'red' : 'yellow' }}-600">
-                    {{ $statistikBulanIni->jumlah_telat ?? 0 }}
-                </div>
-                <div class="text-sm text-gray-600">Total Telat</div>
-            </div>
-        </div>
-    </div>
-    @endif
-
     <div class="bg-white rounded-lg shadow-md p-6">
         <h1 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
             <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -129,16 +98,6 @@
                 </div>
             </div>
 
-            <!-- FITUR BARU: Tombol untuk lihat riwayat -->
-            <div class="text-center mt-6">
-                <a href="{{ route('karyawan.riwayat-absensi') }}" 
-                   class="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                    </svg>
-                    Lihat Riwayat Absensi
-                </a>
-            </div>
         @else
             <form method="POST" action="{{ route('karyawan.store-absensi') }}" id="absensiForm">
                 @csrf
